@@ -1,15 +1,16 @@
 import { DynamicModule, Module } from '@nestjs/common';
-import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
-import { utilities } from 'nest-winston';
+import { WinstonModule, utilities } from 'nest-winston';
 import * as fs from 'fs';
+import 'winston-daily-rotate-file';
+import 'winston-daily-rotate-file';
 
 // 定义模块配置接口
 interface LoggerLibOptions {
   serviceName: string;
   logPath?: string; // 可选的日志文件路径
   logLevel?: string; // 添加日志级别配置
-  maxsize?: number;
+  maxSize?: number;
   maxFiles?: number;
   zippedArchive?: boolean;
   enableConsole?: boolean; // 新增：是否启用控制台输出
@@ -23,7 +24,7 @@ export class LoggerLibModule {
       serviceName,
       logPath = 'logs',
       logLevel = 'info',
-      maxsize = 20 * 1024 * 1024,
+      maxSize = 20 * 1024 * 1024,
       maxFiles = 14,
       zippedArchive = true,
       enableConsole = true,
@@ -31,7 +32,7 @@ export class LoggerLibModule {
     } = options;
 
     const transports: winston.transport[] = [];
-
+    console.log(options, logLevel, maxFiles, enableConsole, enableFile);
     // 控制台输出
     if (enableConsole) {
       transports.push(
@@ -52,16 +53,19 @@ export class LoggerLibModule {
       if (!fs.existsSync(logPath)) {
         fs.mkdirSync(logPath, { recursive: true });
       }
-
       // 普通日志文件
       transports.push(
-        new winston.transports.File({
-          filename: `${logPath}/${serviceName}-%DATE%.log`,
+        new winston.transports.DailyRotateFile({
+          dirname: logPath,
+          filename: `${serviceName}-%DATE%.log`,
+          datePattern: 'YYYY-MM-DD',
           zippedArchive,
-          maxsize,
+          maxSize,
           maxFiles,
           format: winston.format.combine(
-            winston.format.timestamp(),
+            winston.format.timestamp({
+              format: 'YYYY-MM-DD HH:mm:ss',
+            }),
             winston.format.metadata({
               fillExcept: ['message', 'level', 'timestamp', 'context'],
             }),
@@ -73,13 +77,17 @@ export class LoggerLibModule {
 
       // 错误日志文件
       transports.push(
-        new winston.transports.File({
-          filename: `${logPath}/${serviceName}-error-%DATE%.log`,
+        new winston.transports.DailyRotateFile({
+          dirname: logPath,
+          filename: `${serviceName}-error-%DATE%.log`,
+          datePattern: 'YYYY-MM-DD',
           zippedArchive,
-          maxsize,
+          maxSize,
           maxFiles,
           format: winston.format.combine(
-            winston.format.timestamp(),
+            winston.format.timestamp({
+              format: 'YYYY-MM-DD HH:mm:ss',
+            }),
             winston.format.metadata({
               fillExcept: ['message', 'level', 'timestamp', 'context'],
             }),
