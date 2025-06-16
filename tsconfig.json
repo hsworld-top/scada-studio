@@ -18,8 +18,18 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/logger-lib": ["libs/logger-lib/src"],
-      "@app/logger-lib/*": ["libs/logger-lib/src/*"]
+      "@app/logger-lib": [
+        "libs/logger-lib/src"
+      ],
+      "@app/logger-lib/*": [
+        "libs/logger-lib/src/*"
+      ],
+      "@app/redis-lib": [
+        "libs/redis-lib/src"
+      ],
+      "@app/redis-lib/*": [
+        "libs/redis-lib/src/*"
+      ]
     }
   }
 }

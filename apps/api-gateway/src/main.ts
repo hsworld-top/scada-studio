@@ -24,6 +24,5 @@ async function bootstrap() {
   await app.startAllMicroservices(); // 启动所有 connectMicroservice 实例
   // 启动 HTTP 接口（例如供前端访问）
   await app.listen(3000);
-  console.log('API 网关 HTTP 服务已启动: http://localhost:3000');
 }
 bootstrap();
