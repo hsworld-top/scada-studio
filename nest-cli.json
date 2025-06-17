@@ -37,6 +37,15 @@
         "tsConfigPath": "libs/logger-lib/tsconfig.lib.json"
       }
     },
+    "pg-lib": {
+      "type": "library",
+      "root": "libs/pg-lib",
+      "entryFile": "index",
+      "sourceRoot": "libs/pg-lib/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/pg-lib/tsconfig.lib.json"
+      }
+    },
     "project-studio": {
       "type": "application",
       "root": "apps/project-studio",

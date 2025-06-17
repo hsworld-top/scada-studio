@@ -1,30 +1,42 @@
-import { Module, DynamicModule } from '@nestjs/common';
+import { Module, DynamicModule, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { RedisService } from './redis-lib.service';
+import { RedisLibService } from './redis-lib.service'; // 使用重命名后的服务
 import Redis from 'ioredis';
 
 @Module({})
-export class RedisModule {
+export class RedisLibModule {
+  // 重命名类
+  private static readonly logger = new Logger(RedisLibModule.name);
+
   static register(): DynamicModule {
+    const redisClientProvider = {
+      provide: 'REDIS_CLIENT',
+      useFactory: (configService: ConfigService): Redis => {
+        const client = new Redis({
+          host: configService.get<string>('REDIS_HOST', 'localhost'),
+          port: configService.get<number>('REDIS_PORT', 6379),
+          password: configService.get<string>('REDIS_PASSWORD'),
+          db: configService.get<number>('REDIS_DB', 0),
+        });
+
+        client.on('connect', () => {
+          this.logger.log('成功连接到 Redis。');
+        });
+
+        client.on('error', (err) => {
+          this.logger.error('Redis 连接错误:', err);
+        });
+
+        return client;
+      },
+      inject: [ConfigService],
+    };
+
     return {
-      module: RedisModule,
+      module: RedisLibModule, // 使用重命名后的类
       imports: [ConfigModule],
-      providers: [
-        {
-          provide: 'REDIS_CLIENT',
-          useFactory: (configService: ConfigService) => {
-            return new Redis({
-              host: configService.get<string>('REDIS_HOST'),
-              port: configService.get<number>('REDIS_PORT'),
-              password: configService.get<string>('REDIS_PASSWORD'),
-              db: configService.get<number>('REDIS_DB', 0),
-            });
-          },
-          inject: [ConfigService],
-        },
-        RedisService,
-      ],
-      exports: [RedisService],
+      providers: [redisClientProvider, RedisLibService], // 使用重命名后的服务
+      exports: [RedisLibService], // 使用重命名后的服务
     };
   }
 }

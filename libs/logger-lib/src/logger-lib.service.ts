@@ -123,14 +123,14 @@ export class AppLogger implements LoggerService {
   /**
    * 记录 info 日志
    */
-  log(message: any, context?: string) {
+  log(message: string, context?: string) {
     this.logger.info(message, { context: context || this.context });
   }
 
   /**
    * 记录 error 日志，可附带堆栈信息
    */
-  error(message: any, trace?: string, context?: string) {
+  error(message: string, trace?: string, context?: string) {
     this.logger.error(message, {
       context: context || this.context,
       stack: trace,
@@ -140,21 +140,21 @@ export class AppLogger implements LoggerService {
   /**
    * 记录 warn 日志
    */
-  warn(message: any, context?: string) {
+  warn(message: string, context?: string) {
     this.logger.warn(message, { context: context || this.context });
   }
 
   /**
    * 记录 debug 日志
    */
-  debug(message: any, context?: string) {
+  debug(message: string, context?: string) {
     this.logger.debug(message, { context: context || this.context });
   }
 
   /**
    * 记录 verbose 日志
    */
-  verbose(message: any, context?: string) {
+  verbose(message: string, context?: string) {
     this.logger.verbose(message, { context: context || this.context });
   }
 }
