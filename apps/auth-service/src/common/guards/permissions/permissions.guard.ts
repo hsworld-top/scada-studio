@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CasbinService } from '../../../modules/casbin/casbin.service';
@@ -22,27 +23,35 @@ export class PermissionsGuard implements CanActivate {
     }>(PERMISSIONS_KEY, context.getHandler());
 
     if (!requiredPermissions) {
-      return true;
+      return true; // 没有设置权限要求的接口直接放行
     }
 
-    const { user } = context.switchToRpc().getData();
+    // 从RPC上下文中获取数据，API Gateway 在调用时应注入 user 对象
+    const rpcData = context.switchToRpc().getData();
+    const user = rpcData.user;
 
-    if (!user || !user.userId) {
-      throw new ForbiddenException('User information not found in request.');
+    // 验证 user 对象和租户信息是否存在
+    if (!user || !user.userId || !user.tenantId) {
+      throw new UnauthorizedException(
+        'User or tenant information not found in request payload.',
+      );
     }
 
     const { resource, action } = requiredPermissions;
     const userId = user.userId.toString();
+    const tenantId = user.tenantId.toString();
 
+    // 调用改造后的 CasbinService.checkPermission
     const hasPermission = await this.casbinService.checkPermission(
       userId,
+      tenantId,
       resource,
       action,
     );
 
     if (!hasPermission) {
       throw new ForbiddenException(
-        'You do not have permission to perform this action.',
+        `User ${userId} does not have permission to perform action '${action}' on resource '${resource}' in tenant ${tenantId}.`,
       );
     }
 

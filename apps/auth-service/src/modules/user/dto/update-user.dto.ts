@@ -1,23 +1,19 @@
 import {
   IsString,
-  IsNotEmpty,
-  IsEmail,
   IsOptional,
+  IsEmail,
   IsArray,
   IsInt,
   IsPhoneNumber,
-  MinLength,
+  IsEnum,
+  IsNotEmpty,
 } from 'class-validator';
+import { UserStatus } from '../entities/user.entity';
 
-export class CreateUserDto {
-  @IsString()
+export class UpdateUserDto {
+  @IsInt()
   @IsNotEmpty()
-  username: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(6)
-  password: string;
+  userId: number;
 
   @IsOptional()
   @IsEmail()
@@ -27,10 +23,14 @@ export class CreateUserDto {
   @IsPhoneNumber()
   phone?: string;
 
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @IsNotEmpty({ each: true })
-  roleNames: string[];
+  roleNames?: string[];
 
   @IsOptional()
   @IsArray()

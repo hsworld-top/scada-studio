@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Global, Module } from '@nestjs/common';
 import { AppLogger } from './logger-lib.service';
 
 // 定义配置接口，使配置更类型安全
@@ -14,7 +14,7 @@ export interface LoggerLibConfig {
   maxSize?: string;
   maxFiles?: string;
 }
-
+@Global() // 将模块设为全局模块
 @Module({})
 export class LoggerLibModule {
   static forRoot(config: LoggerLibConfig): DynamicModule {
@@ -27,7 +27,6 @@ export class LoggerLibModule {
         },
       ],
       exports: [AppLogger], // 导出服务，以便其他模块可以注入
-      global: true, // 将模块设为全局，这样任何模块都可以直接注入 AppLogger
     };
   }
 }

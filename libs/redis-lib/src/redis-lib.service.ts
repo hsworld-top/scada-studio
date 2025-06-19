@@ -1,10 +1,10 @@
-import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from './redis-lib.constants';
 import { AppLogger } from '@app/logger-lib';
 
 @Injectable()
-export class RedisLibService implements OnModuleInit {
+export class RedisLibService {
   private readonly context = 'RedisService';
 
   constructor(
@@ -12,25 +12,15 @@ export class RedisLibService implements OnModuleInit {
     private readonly logger: AppLogger,
   ) {}
 
-  onModuleInit() {
-    this.logger.setContext(this.context);
-    this.redisClient.on('connect', () => {
-      this.logger.log('Successfully connected to Redis.');
-    });
-    this.redisClient.on('error', (err) => {
-      this.logger.error('Redis connection error:', err.stack);
-    });
-  }
-
   get(key: string): Promise<string | null> {
-    return this.redisClient.get(key) as Promise<string | null>;
+    return this.redisClient.get(key);
   }
 
   set(key: string, value: string, ttl?: number): Promise<'OK'> {
     if (ttl) {
-      return this.redisClient.setex(key, ttl, value) as Promise<'OK'>;
+      return this.redisClient.setex(key, ttl, value);
     }
-    return this.redisClient.set(key, value) as Promise<'OK'>;
+    return this.redisClient.set(key, value);
   }
 
   del(keys: string | string[]): Promise<number> {
@@ -38,7 +28,7 @@ export class RedisLibService implements OnModuleInit {
     if (keysToDelete.length === 0) {
       return Promise.resolve(0);
     }
-    return this.redisClient.del(keysToDelete) as Promise<number>;
+    return this.redisClient.del(keysToDelete);
   }
 
   hset(key: string, data: Record<string, any>): Promise<number> {
@@ -49,11 +39,11 @@ export class RedisLibService implements OnModuleInit {
     if (flattenedData.length === 0) {
       return Promise.resolve(0);
     }
-    return this.redisClient.hset(key, ...flattenedData) as Promise<number>;
+    return this.redisClient.hset(key, ...flattenedData);
   }
 
   hgetall(key: string): Promise<Record<string, string>> {
-    return this.redisClient.hgetall(key) as Promise<Record<string, string>>;
+    return this.redisClient.hgetall(key);
   }
 
   async scanDel(pattern: string): Promise<void | Error> {
@@ -65,10 +55,19 @@ export class RedisLibService implements OnModuleInit {
           keysToDelete.push(...keys);
         }
       });
-      stream.on('end', async () => {
+      stream.on('end', () => {
         try {
           if (keysToDelete.length > 0) {
-            await this.del(keysToDelete);
+            this.del(keysToDelete)
+              .then(() => {
+                this.logger.log(
+                  `Deleted ${keysToDelete.length} keys matching pattern: ${pattern}`,
+                );
+              })
+              .catch((err) => {
+                this.logger.error(`Error deleting keys: ${err.message}`);
+                reject(err as Error);
+              });
           }
           resolve();
         } catch (err) {
@@ -76,7 +75,7 @@ export class RedisLibService implements OnModuleInit {
         }
       });
       stream.on('error', (err) => {
-        reject(err as Error);
+        reject(err);
       });
     });
   }

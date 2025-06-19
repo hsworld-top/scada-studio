@@ -2,17 +2,19 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToMany,
   ManyToOne,
+  ManyToMany,
+  Tree,
+  TreeChildren,
+  TreeParent,
   JoinColumn,
-  Index,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Tenant } from '../../tenant/entities/tenant.entity';
 
 @Entity()
-@Index('idx_role_tenant_name', ['tenantId', 'name'], { unique: true })
-export class Role {
+@Tree('materialized-path')
+export class Group {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -29,6 +31,12 @@ export class Role {
   @JoinColumn({ name: 'tenantId' })
   tenant: Tenant;
 
-  @ManyToMany(() => User, (user) => user.roles)
+  @ManyToMany(() => User, (user) => user.groups)
   users: User[];
+
+  @TreeChildren()
+  children: Group[];
+
+  @TreeParent({ onDelete: 'CASCADE' })
+  parent: Group | null;
 }

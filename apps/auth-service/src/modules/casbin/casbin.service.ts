@@ -2,7 +2,7 @@ import { Injectable, Inject, OnModuleInit, forwardRef } from '@nestjs/common';
 import { Enforcer, newEnforcer } from 'casbin';
 import { RedisLibService } from '@app/redis-lib';
 import { AppLogger } from '@app/logger-lib';
-import { ConfigService } from '@nestjs/config'; // 导入 ConfigService
+import { ConfigService } from '@nestjs/config';
 import TypeORMAdapter from 'typeorm-adapter';
 import { TypeORMAdapterOptions } from 'typeorm-adapter';
 import * as path from 'path';
@@ -10,18 +10,17 @@ import * as path from 'path';
 @Injectable()
 export class CasbinService implements OnModuleInit {
   private readonly context = CasbinService.name;
-  private enforcer: Enforcer; // enforcer 现在是类的私有属性
+  private enforcer: Enforcer;
 
   constructor(
     @Inject(forwardRef(() => RedisLibService))
     private readonly redisService: RedisLibService,
     private readonly logger: AppLogger,
-    private readonly configService: ConfigService, // 直接注入 ConfigService
+    private readonly configService: ConfigService,
   ) {
     this.logger.setContext(this.context);
   }
 
-  // 在 onModuleInit 中手动执行所有初始化逻辑
   async onModuleInit() {
     const dbOptions: TypeORMAdapterOptions = {
       type: 'postgres',
@@ -32,65 +31,87 @@ export class CasbinService implements OnModuleInit {
       database: this.configService.get<string>('DB_NAME'),
     };
 
+    // 在 monorepo 结构中，`process.cwd()` 通常指向项目根目录，是定位配置文件的可靠方式
+    const modelPath = path.join(process.cwd(), './casbin-model.conf');
     const adapter = await TypeORMAdapter.newAdapter(dbOptions);
-    this.enforcer = await newEnforcer(
-      path.join(__dirname, '../../casbin-model.conf'),
-      adapter,
-    );
+    this.enforcer = await newEnforcer(modelPath, adapter);
 
     await this.enforcer.loadPolicy();
     this.logger.log('Casbin enforcer has been initialized.');
-
-    await this.seed();
   }
 
-  // 其他方法现在使用 this.enforcer
+  /**
+   * 获取 Casbin enforcer 实例。
+   * @returns {Enforcer} enforcer 实例
+   */
+  getEnforcer(): Enforcer {
+    return this.enforcer;
+  }
+
+  /**
+   * 检查用户在特定租户下是否具有权限（多租户版）。
+   * @param userId 用户ID
+   * @param tenantId 租户ID
+   * @param resource 资源
+   * @param action 动作
+   * @returns {Promise<boolean>} 是否有权限
+   */
   async checkPermission(
     userId: string,
+    tenantId: string,
     resource: string,
     action: string,
   ): Promise<boolean> {
-    const cacheKey = `permission:${userId}:${resource}:${action}`;
+    const cacheKey = `permission:${tenantId}:${userId}:${resource}:${action}`;
     const cachedResult = await this.redisService.get(cacheKey);
     if (cachedResult) {
       return cachedResult === 'true';
     }
-    // 使用 this.enforcer
-    const hasPermission = await this.enforcer.enforce(userId, resource, action);
-    await this.redisService.set(cacheKey, String(hasPermission), 3600);
+
+    const hasPermission = await this.enforcer.enforce(
+      userId,
+      tenantId,
+      resource,
+      action,
+    );
+    await this.redisService.set(cacheKey, String(hasPermission), 3600); // 缓存1小时
     return hasPermission;
   }
 
-  async addRoleForUser(userId: string, role: string): Promise<boolean> {
-    // 使用 this.enforcer
-    const result = await this.enforcer.addGroupingPolicy(userId, role);
+  /**
+   * 为用户在特定租户下添加角色（多租户版）。
+   * @param userId 用户ID
+   * @param role 角色名
+   * @param tenantId 租户ID
+   * @returns {Promise<boolean>} 操作是否成功
+   */
+  async addRoleForUser(
+    userId: string,
+    role: string,
+    tenantId: string,
+  ): Promise<boolean> {
+    // Casbin 中的 g(user, role, domain) -> g(userId, role, tenantId)
+    const result = await this.enforcer.addRoleForUser(userId, role, tenantId);
     if (result) {
-      await this.clearPermissionCacheForUser(userId);
+      // 如果角色分配成功，清除该用户在该租户下的权限缓存
+      await this.clearPermissionCacheForUser(userId, tenantId);
     }
     return result;
   }
 
-  async clearPermissionCacheForUser(userId: string): Promise<void> {
-    const pattern = `permission:${userId}:*`;
+  /**
+   * 清除用户在特定租户下的所有权限缓存（多租户版）。
+   * @param userId 用户ID
+   * @param tenantId 租户ID
+   */
+  async clearPermissionCacheForUser(
+    userId: string,
+    tenantId: string,
+  ): Promise<void> {
+    const pattern = `permission:${tenantId}:${userId}:*`;
     this.logger.log(
-      `Clearing permission cache for user ${userId} with pattern: ${pattern}`,
+      `Clearing permission cache for user ${userId} in tenant ${tenantId} with pattern: ${pattern}`,
     );
     await this.redisService.scanDel(pattern);
-  }
-
-  private async seed() {
-    // 使用 this.enforcer
-    const policies = await this.enforcer.getPolicy();
-    if (policies.length === 0) {
-      this.logger.log('Database is empty. Seeding initial Casbin policies...');
-      const initialPolicies = [
-        ['super-admin', 'all', 'manage'],
-        ['developer', 'workbench', 'access'],
-        ['developer', 'project', 'manage'],
-        ['super-admin', 'user', 'create'],
-      ];
-      await this.enforcer.addPolicies(initialPolicies);
-      this.logger.log('Initial policies have been seeded successfully.');
-    }
   }
 }
