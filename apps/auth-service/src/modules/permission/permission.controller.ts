@@ -12,7 +12,7 @@ export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 
   @MessagePattern('permissions.getSystemPermissions')
-  async getSystemPermissions(): Promise<any> {
+  getSystemPermissions(): any {
     return this.permissionService.getSystemPermissions();
   }
 

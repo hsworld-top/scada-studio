@@ -3,7 +3,6 @@ import {
   Inject,
   forwardRef,
   UnauthorizedException,
-  NotFoundException,
   BadRequestException,
   HttpException,
   HttpStatus,
