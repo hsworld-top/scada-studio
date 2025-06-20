@@ -11,6 +11,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { SsoLoginDto } from './dto/sso-login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 /**
  * AuthController 负责处理认证相关的 HTTP 和微服务请求。
@@ -65,6 +66,19 @@ export class AuthController {
   @MessagePattern('auth.ssoLogin')
   async ssoLogin(@Payload(new ValidationPipe()) ssoLoginDto: SsoLoginDto) {
     return this.authService.ssoLogin(ssoLoginDto);
+  }
+
+  /**
+   * 使用 Refresh Token 获取新的 Access Token。
+   */
+  @MessagePattern('auth.refreshToken')
+  // 注意：这里没有使用 @UseGuards，因为微服务场景下守卫需要特殊处理。
+  // 我们将在 Service 层直接处理 DTO 和 Token 验证。
+  // 如果这是 HTTP 接口，我们会用 @UseGuards(AuthGuard('jwt-refresh'))
+  async refreshToken(
+    @Payload(new ValidationPipe()) refreshTokenDto: RefreshTokenDto,
+  ) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 
   /**

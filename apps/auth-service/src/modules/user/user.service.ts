@@ -24,7 +24,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { SetUserStatusDto } from './dto/set-user-status.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { ConfigService } from '@nestjs/config';
 import { nanoid } from 'nanoid';
 
 interface SsoPayload {
@@ -47,7 +46,6 @@ export class UserService implements OnModuleInit {
     @Inject(forwardRef(() => CasbinService))
     private casbinService: CasbinService,
     private readonly logger: AppLogger,
-    private readonly configService: ConfigService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -528,10 +526,7 @@ export class UserService implements OnModuleInit {
       this.logger.log(`Seeding super admin for tenant ${tenantId}...`);
       await this.create({
         username: 'admin',
-        password: this.configService.get<string>(
-          'ADMIN_PASSWORD',
-          'admin_password',
-        ),
+        password: process.env.ADMIN_PASSWORD || 'admin123',
         roleNames: ['super-admin'],
         tenantId,
       });

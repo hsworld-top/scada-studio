@@ -7,6 +7,7 @@ import {
   HttpException,
   HttpStatus,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { nanoid } from 'nanoid';
@@ -30,6 +31,7 @@ import { SsoLoginDto } from './dto/sso-login.dto';
 export class AuthService {
   private readonly LOGIN_ATTEMPTS_KEY_PREFIX = 'login-attempts';
   private readonly CAPTCHA_KEY_PREFIX = 'captcha';
+  private readonly REFRESH_TOKEN_KEY_PREFIX = 'refresh-token';
 
   constructor(
     private userService: UserService,
@@ -193,35 +195,36 @@ export class AuthService {
    * @param user 用户信息
    * @returns 包含 access_token 的对象
    */
-  login(user: Partial<User>) {
-    const payload = {
-      username: user.username,
-      sub: user.id?.toString(),
-      tenantId: user.tenantId,
-      tenantSlug: user.tenant?.slug,
-      roles: user.roles?.map((role) => role.name),
-    };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+  async login(user: Partial<User>) {
+    const tokens = await this._generateTokens(user);
+    await this._storeRefreshToken(user.id!, tokens.refreshToken);
+    return tokens;
   }
 
   /**
-   * 用户登出，将 token 加入黑名单，设置过期时间。
-   * @param token 需要作废的 JWT token
+   * 用户登出逻辑，增加了对 refresh token 的处理。
+   * @param accessToken 需要作废的 access_token
    */
-  async logout(token: string): Promise<void> {
+  async logout(accessToken: string): Promise<void> {
     try {
-      const decoded = this.jwtService.decode(token);
+      const decoded = this.jwtService.decode(accessToken);
       if (!decoded || !decoded.exp) return;
 
+      const userId = decoded.sub;
       const expiration = decoded.exp;
       const now = Math.floor(Date.now() / 1000);
       const ttl = expiration - now;
 
+      // 1. 将 access_token 加入黑名单
       if (ttl > 0) {
-        await this.redisService.set(`blacklist:${token}`, '1', ttl);
+        await this.redisService.set(`blacklist:${accessToken}`, '1', ttl);
       }
+
+      // 2. 从 Redis 中删除 refresh token，实现会话的彻底终止
+      await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+      this.logger.log(
+        `User ${userId} logged out and refresh token was revoked.`,
+      );
     } catch (error) {
       this.logger.error(
         'Error during logout process',
@@ -230,7 +233,47 @@ export class AuthService {
       );
     }
   }
+  /**
+   * 使用 Refresh Token 刷新 Access Token。
+   * @param token 客户端传来的 refresh token
+   * @returns 新的 access_token 和 refresh_token
+   */
+  async refreshToken(token: string) {
+    let payload;
+    try {
+      // 1. 验证 Refresh Token 的签名和时效
+      payload = await this.jwtService.verify(token, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+    } catch (error) {
+      throw new ForbiddenException('Invalid or expired refresh token.');
+    }
 
+    const { sub: userId } = payload;
+
+    // 2. 校验 Redis 中存储的 Token 是否与客户端传来的一致
+    const storedToken = await this.redisService.get(
+      `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
+    );
+    if (!storedToken || storedToken !== token) {
+      // 如果不一致，说明有安全风险（可能 token 已被盗用或已在别处登录），强制所有会话下线
+      await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+      throw new ForbiddenException(
+        'Refresh token has been invalidated. Please log in again.',
+      );
+    }
+
+    const user = await this.userService.findOneById(userId, payload.tenantId);
+    if (!user) {
+      throw new ForbiddenException('User not found.');
+    }
+
+    // 3. 签发新的 tokens 并更新 Redis
+    const tokens = await this._generateTokens(user);
+    await this._storeRefreshToken(user.id, tokens.refreshToken);
+
+    return tokens;
+  }
   /**
    * 处理单点登录请求。
    * @param ssoLoginDto
@@ -276,18 +319,96 @@ export class AuthService {
       });
 
       // 4. 为用户生成我们系统的 Token
-      const ourToken = this.login(user);
+      const tokens = await this.login(user);
       this.logger.log(
         `User '${user.username}' logged in via SSO from issuer '${ssoIssuer}'.`,
       );
 
-      return { success: true, data: ourToken };
+      return { success: true, data: tokens };
     } catch (error) {
       this.logger.error('SSO login failed.', error.stack, 'AuthService');
       if (error instanceof UnauthorizedException) {
         throw error;
       }
       throw new UnauthorizedException('Invalid SSO token.');
+    }
+  }
+
+  /**
+   * 生成 access_token 和 refresh_token。
+   * @param user 用户部分信息
+   * @private
+   */
+  private async _generateTokens(user: Partial<User>) {
+    const payload = {
+      username: user.username,
+      sub: user.id!.toString(),
+      tenantId: user.tenantId,
+      tenantSlug: user.tenant?.slug,
+      roles: user.roles?.map((role) => role.name),
+    };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: this.configService.get<string>(
+          'JWT_ACCESS_TOKEN_TTL',
+          '15m',
+        ),
+      }),
+      this.jwtService.signAsync(
+        { sub: user.id!.toString(), tenantId: user.tenantId },
+        {
+          // refresh token 只包含必要信息
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+          expiresIn: this.configService.get<string>(
+            'JWT_REFRESH_TOKEN_TTL',
+            '7d',
+          ),
+        },
+      ),
+    ]);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+  /**
+   * 将用户的 refresh token 存储到 Redis (覆盖式写入，实现单点登录)。
+   * @param userId 用户ID
+   * @param token refresh token
+   * @private
+   */
+  private async _storeRefreshToken(userId: number, token: string) {
+    const ttlInSeconds = this._parseTtl(
+      this.configService.get<string>('JWT_REFRESH_TOKEN_TTL', '7d'),
+    );
+    await this.redisService.set(
+      `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
+      token,
+      ttlInSeconds,
+    );
+  }
+  /**
+   * 解析 TTL 字符串 (如 '7d', '1h') 为秒。
+   * @param ttl 字符串
+   * @private
+   */
+  private _parseTtl(ttl: string): number {
+    const unit = ttl.charAt(ttl.length - 1);
+    const value = parseInt(ttl.slice(0, -1), 10);
+    switch (unit) {
+      case 's':
+        return value;
+      case 'm':
+        return value * 60;
+      case 'h':
+        return value * 60 * 60;
+      case 'd':
+        return value * 24 * 60 * 60;
+      default:
+        return Number(ttl);
     }
   }
 }
