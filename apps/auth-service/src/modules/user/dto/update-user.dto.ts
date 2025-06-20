@@ -40,4 +40,8 @@ export class UpdateUserDto {
   @IsInt()
   @IsNotEmpty()
   tenantId: number;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

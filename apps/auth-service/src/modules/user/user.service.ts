@@ -57,8 +57,16 @@ export class UserService implements OnModuleInit {
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const { username, password, roleNames, groupIds, tenantId, email, phone } =
-      createUserDto;
+    const {
+      username,
+      password,
+      roleNames,
+      groupIds,
+      tenantId,
+      email,
+      phone,
+      description,
+    } = createUserDto;
 
     const tenant = await this.tenantRepository.findOneBy({ id: tenantId });
     if (!tenant) {
@@ -70,10 +78,12 @@ export class UserService implements OnModuleInit {
       email?: string;
       phone?: string;
       tenantId: number;
+      description?: string;
     }> = [];
     if (username) orConditions.push({ username, tenantId });
     if (email) orConditions.push({ email, tenantId });
     if (phone) orConditions.push({ phone, tenantId });
+    if (description) orConditions.push({ description, tenantId });
 
     if (orConditions.length > 0) {
       const existingUser = await this.userRepository.findOne({
@@ -128,6 +138,7 @@ export class UserService implements OnModuleInit {
       tenantId,
       roles,
       groups,
+      description,
     });
     const savedUser = await this.userRepository.save(user);
 
@@ -200,8 +211,16 @@ export class UserService implements OnModuleInit {
   }
 
   async update(updateUserDto: UpdateUserDto): Promise<User> {
-    const { userId, tenantId, email, phone, status, roleNames, groupIds } =
-      updateUserDto;
+    const {
+      userId,
+      tenantId,
+      email,
+      phone,
+      status,
+      roleNames,
+      groupIds,
+      description,
+    } = updateUserDto;
 
     const user = await this.userRepository.findOne({
       where: { id: userId, tenantId },
@@ -216,6 +235,7 @@ export class UserService implements OnModuleInit {
     if (email) user.email = email;
     if (phone) user.phone = phone;
     if (status) user.status = status;
+    if (description !== undefined) user.description = description;
 
     if (roleNames) {
       const newRoles = await this.roleRepository.find({

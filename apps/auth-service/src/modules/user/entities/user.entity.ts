@@ -94,6 +94,9 @@ export class User {
   @DeleteDateColumn()
   deletedAt: Date;
 
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
   @BeforeInsert()
   async hashPasswordOnInsert() {
     if (this.password) {

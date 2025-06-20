@@ -40,4 +40,8 @@ export class CreateUserDto {
   @IsInt()
   @IsNotEmpty()
   tenantId: number;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }
