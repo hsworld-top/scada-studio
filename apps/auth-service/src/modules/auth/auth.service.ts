@@ -1,7 +1,5 @@
 import {
   Injectable,
-  Inject,
-  forwardRef,
   UnauthorizedException,
   BadRequestException,
   HttpException,
@@ -35,7 +33,6 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
-    @Inject(forwardRef(() => RedisLibService))
     private redisService: RedisLibService,
     private readonly logger: AppLogger,
     @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
@@ -185,20 +182,33 @@ export class AuthService {
 
   /**
    * 用户登录，生成包含 tenantId 的 JWT token。
+   * 管理员单点登录，普通用户多端登录。
    * @param user 用户信息
-   * @returns 包含 access_token 的对象
+   * @returns 包含 access_token、refresh_token、sessionId（普通用户） 的对象
    */
   async login(user: Partial<User>) {
-    const tokens = await this._generateTokens(user);
-    await this._storeRefreshToken(user.id!, tokens.refreshToken);
-    return tokens;
+    // 判断是否为管理员（通过角色名 'admin'）
+    const isAdmin = user.roles?.some((role) => role.name === 'admin');
+    // 普通用户多端登录，生成唯一 sessionId
+    let sessionId: string | undefined = undefined;
+    if (!isAdmin) {
+      sessionId = nanoid(); // nanoid 生成唯一 sessionId
+    }
+    // 生成 token，普通用户 payload 带 sessionId
+    const tokens = await this._generateTokens(user, sessionId);
+    // 存储 refresh token，管理员单点登录覆盖写入，普通用户多端写入
+    await this._storeRefreshToken(user.id!, tokens.refreshToken, !!isAdmin, sessionId);
+    // 返回 sessionId 便于前端后续刷新/登出
+    return { ...tokens, sessionId };
   }
 
   /**
-   * 用户登出逻辑，增加了对 refresh token 的处理。
+   * 用户登出逻辑，支持多端和单点登录。
+   * 管理员删除 refresh-token:{userId}，普通用户删除 refresh-token:{userId}:{sessionId}
    * @param accessToken 需要作废的 access_token
+   * @param sessionId 普通用户需带 sessionId
    */
-  async logout(accessToken: string): Promise<void> {
+  async logout(accessToken: string, sessionId?: string): Promise<void> {
     try {
       const decoded = this.jwtService.decode(accessToken);
       if (!decoded || !decoded.exp) return;
@@ -207,14 +217,22 @@ export class AuthService {
       const expiration = decoded.exp;
       const now = Math.floor(Date.now() / 1000);
       const ttl = expiration - now;
+      // 判断是否为管理员
+      const isAdmin = decoded.roles?.includes('admin');
 
-      // 1. 将 access_token 加入黑名单
+      // 1. 将 access_token 加入黑名单，防止被重用
       if (ttl > 0) {
         await this.redisService.set(`blacklist:${accessToken}`, '1', ttl);
       }
 
-      // 2. 从 Redis 中删除 refresh token，实现会话的彻底终止
-      await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+      // 2. 删除 refresh token
+      if (isAdmin) {
+        // 管理员单点登录，删除唯一 refresh token
+        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+      } else if (sessionId) {
+        // 普通用户多端登录，删除指定 sessionId 的 refresh token
+        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`);
+      }
       this.logger.log(
         `User ${userId} logged out and refresh token was revoked.`,
       );
@@ -228,10 +246,12 @@ export class AuthService {
   }
   /**
    * 使用 Refresh Token 刷新 Access Token。
+   * 管理员只需 userId，普通用户需带 sessionId。
    * @param token 客户端传来的 refresh token
-   * @returns 新的 access_token 和 refresh_token
+   * @param sessionId 普通用户需带 sessionId
+   * @returns 新的 access_token、refresh_token、sessionId
    */
-  async refreshToken(token: string) {
+  async refreshToken(token: string, sessionId?: string) {
     let payload;
     try {
       // 1. 验证 Refresh Token 的签名和时效
@@ -244,15 +264,29 @@ export class AuthService {
       );
     }
 
-    const { sub: userId } = payload;
-
-    // 2. 校验 Redis 中存储的 Token 是否与客户端传来的一致
-    const storedToken = await this.redisService.get(
-      `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
-    );
+    const { sub: userId, roles } = payload;
+    const isAdmin = roles?.includes('admin');
+    let storedToken;
+    if (isAdmin) {
+      // 管理员单点登录，refresh-token:{userId}
+      storedToken = await this.redisService.get(
+        `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
+      );
+    } else if (sessionId) {
+      // 普通用户多端登录，refresh-token:{userId}:{sessionId}
+      storedToken = await this.redisService.get(
+        `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`,
+      );
+    } else {
+      throw new ForbiddenException('SessionId required for user refresh token.');
+    }
     if (!storedToken || storedToken !== token) {
       // 如果不一致，说明有安全风险（可能 token 已被盗用或已在别处登录），强制所有会话下线
-      await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+      if (isAdmin) {
+        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+      } else if (sessionId) {
+        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`);
+      }
       throw new ForbiddenException(
         'Refresh token has been invalidated. Please log in again.',
       );
@@ -264,10 +298,10 @@ export class AuthService {
     }
 
     // 3. 签发新的 tokens 并更新 Redis
-    const tokens = await this._generateTokens(user);
-    await this._storeRefreshToken(user.id, tokens.refreshToken);
+    const tokens = await this._generateTokens(user, sessionId);
+    await this._storeRefreshToken(user.id, tokens.refreshToken, isAdmin, sessionId);
 
-    return tokens;
+    return { ...tokens, sessionId };
   }
   /**
    * 处理单点登录请求。
@@ -331,17 +365,21 @@ export class AuthService {
 
   /**
    * 生成 access_token 和 refresh_token。
+   * 普通用户 payload 带 sessionId，管理员不带。
    * @param user 用户部分信息
+   * @param sessionId 普通用户多端登录的 sessionId
    * @private
    */
-  private async _generateTokens(user: Partial<User>) {
-    const payload = {
+  private async _generateTokens(user: Partial<User>, sessionId?: string) {
+    // 构造 JWT payload
+    const payload: any = {
       username: user.username,
       sub: user.id!.toString(),
       tenantId: user.tenantId,
       tenantSlug: user.tenant?.slug,
       roles: user.roles?.map((role) => role.name),
     };
+    if (sessionId) payload.sessionId = sessionId; // 普通用户多端登录带 sessionId
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
@@ -349,7 +387,7 @@ export class AuthService {
         expiresIn: process.env.JWT_ACCESS_TOKEN_TTL,
       }),
       this.jwtService.signAsync(
-        { sub: user.id!.toString(), tenantId: user.tenantId },
+        { sub: user.id!.toString(), tenantId: user.tenantId, roles: user.roles?.map((role) => role.name), sessionId },
         {
           // refresh token 只包含必要信息
           secret: process.env.JWT_REFRESH_SECRET,
@@ -364,20 +402,33 @@ export class AuthService {
     };
   }
   /**
-   * 将用户的 refresh token 存储到 Redis (覆盖式写入，实现单点登录)。
+   * 将用户的 refresh token 存储到 Redis。
+   * 管理员覆盖式写入，普通用户多端写入。
    * @param userId 用户ID
    * @param token refresh token
+   * @param isAdmin 是否管理员
+   * @param sessionId 普通用户多端登录的 sessionId
    * @private
    */
-  private async _storeRefreshToken(userId: number, token: string) {
+  private async _storeRefreshToken(userId: number, token: string, isAdmin: boolean, sessionId?: string) {
     const ttlInSeconds = this._parseTtl(
       process.env.JWT_REFRESH_TOKEN_TTL || '7d',
     );
-    await this.redisService.set(
-      `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
-      token,
-      ttlInSeconds,
-    );
+    if (isAdmin) {
+      // 管理员单点登录，覆盖写入
+      await this.redisService.set(
+        `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
+        token,
+        ttlInSeconds,
+      );
+    } else if (sessionId) {
+      // 普通用户多端登录，sessionId区分
+      await this.redisService.set(
+        `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`,
+        token,
+        ttlInSeconds,
+      );
+    }
   }
   /**
    * 解析 TTL 字符串 (如 '7d', '1h') 为秒。

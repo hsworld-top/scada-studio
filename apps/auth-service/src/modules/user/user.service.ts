@@ -1,13 +1,12 @@
 // /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Injectable,
-  Inject,
-  forwardRef,
   NotFoundException,
   OnModuleInit,
   ConflictException,
   UnauthorizedException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -43,7 +42,6 @@ export class UserService implements OnModuleInit {
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     @InjectRepository(Group) private groupRepository: Repository<Group>,
     @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
-    @Inject(forwardRef(() => CasbinService))
     private casbinService: CasbinService,
     private readonly logger: AppLogger,
   ) {
@@ -52,6 +50,13 @@ export class UserService implements OnModuleInit {
 
   async onModuleInit() {
     await this.seedDefaultTenant();
+  }
+
+  /**
+   * 校验密码强度：必须包含大写、小写、数字、特殊字符，且长度>=8
+   */
+  private isStrongPassword(password: string): boolean {
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(password);
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -126,6 +131,11 @@ export class UserService implements OnModuleInit {
           'One or more groups do not exist in this tenant.',
         );
       }
+    }
+
+    // 密码强度校验
+    if (!this.isStrongPassword(password)) {
+      throw new BadRequestException('密码强度不足，需包含大写、小写、数字、特殊字符，且长度不少于8位');
     }
 
     const user = this.userRepository.create({
@@ -395,6 +405,11 @@ export class UserService implements OnModuleInit {
       throw new UnauthorizedException('Incorrect old password.');
     }
 
+    // 密码强度校验
+    if (!this.isStrongPassword(newPassword)) {
+      throw new BadRequestException('密码强度不足，需包含大写、小写、数字、特殊字符，且长度不少于8位');
+    }
+
     user.password = newPassword;
     await this.userRepository.save(user);
 
@@ -475,24 +490,24 @@ export class UserService implements OnModuleInit {
       this.logger.log(`Default tenant seeded with ID: ${tenant.id}`);
     }
 
+    await this.initTenantData(tenant);
+  }
+
+  /**
+   * 初始化租户的基础角色、权限策略和超级管理员账号。
+   * @param tenant 新建的租户实体
+   */
+  async initTenantData(tenant: Tenant) {
     const tenantId = tenant.id;
     const tenantIdStr = tenant.id.toString();
-
     const rolesToSeed = ['super-admin', 'developer'];
-    const existingRolesCount = await this.roleRepository.count({
-      where: { tenantId },
-    });
+    const existingRolesCount = await this.roleRepository.count({ where: { tenantId } });
     if (existingRolesCount === 0) {
       this.logger.log(`Seeding initial roles for tenant ${tenantId}...`);
-      const roleEntities = rolesToSeed.map((name) => ({
-        name,
-        tenantId,
-        description: `The ${name} role`,
-      }));
+      const roleEntities = rolesToSeed.map((name) => ({ name, tenantId, description: `The ${name} role` }));
       await this.roleRepository.save(roleEntities);
       this.logger.log('Initial roles seeded.');
     }
-
     const enforcer = this.casbinService.getEnforcer();
     const initialPolicies = [
       ['super-admin', tenantIdStr, 'all', 'manage'],
@@ -510,6 +525,10 @@ export class UserService implements OnModuleInit {
       ['super-admin', tenantIdStr, 'group', 'update'],
       ['super-admin', tenantIdStr, 'group', 'delete'],
       ['super-admin', tenantIdStr, 'permission', 'manage'],
+      ['super-admin', tenantIdStr, 'tenant', 'create'],
+      ['super-admin', tenantIdStr, 'tenant', 'update'],
+      ['super-admin', tenantIdStr, 'tenant', 'delete'],
+      ['super-admin', tenantIdStr, 'tenant', 'read'],
       ['developer', tenantIdStr, 'workbench', 'access'],
       ['developer', tenantIdStr, 'project', 'manage'],
     ];
@@ -518,10 +537,7 @@ export class UserService implements OnModuleInit {
         await enforcer.addPolicy(...p);
       }
     }
-
-    const adminExists = await this.userRepository.findOne({
-      where: { username: 'admin', tenantId },
-    });
+    const adminExists = await this.userRepository.findOne({ where: { username: 'admin', tenantId } });
     if (!adminExists) {
       this.logger.log(`Seeding super admin for tenant ${tenantId}...`);
       await this.create({

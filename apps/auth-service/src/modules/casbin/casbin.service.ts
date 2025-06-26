@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleInit, forwardRef } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Enforcer, newEnforcer } from 'casbin';
 import { RedisLibService } from '@app/redis-lib';
 import { AppLogger } from '@app/logger-lib';
@@ -13,7 +13,6 @@ export class CasbinService implements OnModuleInit {
   private enforcer: Enforcer;
 
   constructor(
-    @Inject(forwardRef(() => RedisLibService))
     private readonly redisService: RedisLibService,
     private readonly logger: AppLogger,
     private readonly configService: ConfigService,

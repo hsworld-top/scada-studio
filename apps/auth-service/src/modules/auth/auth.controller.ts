@@ -32,7 +32,7 @@ export class AuthController {
   /**
    * 处理微服务的登录消息，校验用户并返回 token。
    * @param loginDto 登录数据传输对象
-   * @returns 登录结果，包含 token 或错误信息
+   * @returns 登录结果，包含 token 或错误信息（普通用户含 sessionId）
    */
   @MessagePattern('auth.login')
   async login(@Payload(new ValidationPipe()) loginDto: LoginDto) {
@@ -54,7 +54,8 @@ export class AuthController {
 
     // 3. 登录成功后处理
     await this.authService.recordLoginAttempt(loginDto, true);
-    const token = this.authService.login(user);
+    // 返回token和sessionId（普通用户）
+    const token = await this.authService.login(user);
     return { success: true, data: token };
   }
 
@@ -70,15 +71,14 @@ export class AuthController {
 
   /**
    * 使用 Refresh Token 获取新的 Access Token。
+   * @param refreshTokenDto 包含 refreshToken 和（普通用户）sessionId
    */
   @MessagePattern('auth.refreshToken')
-  // 注意：这里没有使用 @UseGuards，因为微服务场景下守卫需要特殊处理。
-  // 我们将在 Service 层直接处理 DTO 和 Token 验证。
-  // 如果这是 HTTP 接口，我们会用 @UseGuards(AuthGuard('jwt-refresh'))
   async refreshToken(
     @Payload(new ValidationPipe()) refreshTokenDto: RefreshTokenDto,
   ) {
-    return this.authService.refreshToken(refreshTokenDto.refreshToken);
+    // 普通用户多端登录需带 sessionId
+    return this.authService.refreshToken(refreshTokenDto.refreshToken, refreshTokenDto.sessionId);
   }
 
   /**
@@ -90,8 +90,10 @@ export class AuthController {
   @Post('logout')
   async httpLogout(@Request() req) {
     const token = req.headers.authorization?.split(' ')[1];
+    // sessionId 可通过 header 或 body 传递，这里假设从 body 获取
+    const sessionId = req.body?.sessionId;
     if (token) {
-      await this.authService.logout(token);
+      await this.authService.logout(token, sessionId);
     }
     return { success: true, message: 'Logout successful' };
   }
