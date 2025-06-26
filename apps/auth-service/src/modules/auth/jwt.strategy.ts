@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { RedisLibService } from '@app/redis-lib';
 import { AppLogger } from '@app/logger-lib';
+import { I18nService } from 'nestjs-i18n';
 
 /**
  * JwtStrategy 用于处理 JWT 的验证逻辑，包括 token 的有效性和黑名单校验。
@@ -13,10 +14,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * 构造函数，配置 JWT 策略参数，并注入依赖服务。
    * @param redisService Redis 服务，用于 token 黑名单校验
    * @param logger 日志服务
+   * @param i18n 国际化服务
    */
   constructor(
     private redisService: RedisLibService,
     private logger: AppLogger,
+    private readonly i18n: I18nService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -38,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
     if (!token) {
       this.logger.warn('No token found in request during JWT validation.');
-      throw new UnauthorizedException('No token found in request');
+      throw new UnauthorizedException(await this.i18n.t('common.jwt_no_token'));
     }
 
     const isBlacklisted = await this.redisService.get(`blacklist:${token}`);
@@ -46,14 +49,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       this.logger.warn(
         `Attempted to use a blacklisted token for user: ${payload.username}`,
       );
-      throw new UnauthorizedException('Token has been invalidated.');
+      throw new UnauthorizedException(await this.i18n.t('common.jwt_token_invalidated'));
     }
 
     if (!payload.tenantId) {
       this.logger.error('JWT payload is missing tenantId.', '', 'JwtStrategy');
-      throw new UnauthorizedException(
-        'Invalid token: tenant information is missing.',
-      );
+      throw new UnauthorizedException(await this.i18n.t('common.jwt_missing_tenant'));
     }
 
     return {

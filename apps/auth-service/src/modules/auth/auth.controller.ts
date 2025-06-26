@@ -12,13 +12,14 @@ import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { SsoLoginDto } from './dto/sso-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { I18nService } from 'nestjs-i18n';
 
 /**
  * AuthController 负责处理认证相关的 HTTP 和微服务请求。
  */
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService, private readonly i18n: I18nService) {}
 
   /**
    * 生成图形验证码。
@@ -49,7 +50,7 @@ export class AuthController {
     if (!user) {
       // 记录登录失败
       await this.authService.recordLoginAttempt(loginDto, false);
-      throw new UnauthorizedException('Invalid credentials or tenant.');
+      throw new UnauthorizedException(await this.i18n.t('common.invalid_credentials'));
     }
 
     // 3. 登录成功后处理

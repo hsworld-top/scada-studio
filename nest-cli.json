@@ -63,6 +63,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/redis-lib/tsconfig.lib.json"
       }
+    },
+    "i18n-lib": {
+      "type": "library",
+      "root": "libs/i18n-lib",
+      "entryFile": "index",
+      "sourceRoot": "libs/i18n-lib/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/i18n-lib/tsconfig.lib.json"
+      }
     }
   }
 }

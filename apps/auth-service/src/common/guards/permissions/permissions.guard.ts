@@ -8,12 +8,14 @@ import {
 import { Reflector } from '@nestjs/core';
 import { CasbinService } from '../../../modules/casbin/casbin.service';
 import { PERMISSIONS_KEY } from '../../decorators/require-permissions/require-permissions.decorator';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private casbinService: CasbinService,
+    private readonly i18n: I18nService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,9 +34,7 @@ export class PermissionsGuard implements CanActivate {
 
     // 验证 user 对象和租户信息是否存在
     if (!user || !user.userId || !user.tenantId) {
-      throw new UnauthorizedException(
-        'User or tenant information not found in request payload.',
-      );
+      throw new UnauthorizedException(await this.i18n.t('common.user_or_tenant_missing'));
     }
 
     const { resource, action } = requiredPermissions;
@@ -50,9 +50,7 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasPermission) {
-      throw new ForbiddenException(
-        `User ${userId} does not have permission to perform action '${action}' on resource '${resource}' in tenant ${tenantId}.`,
-      );
+      throw new ForbiddenException(await this.i18n.t('common.permission_denied', { args: { userId, action, resource, tenantId } }));
     }
 
     return true;

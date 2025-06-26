@@ -18,24 +18,13 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/logger-lib": [
-        "libs/logger-lib/src"
-      ],
-      "@app/logger-lib/*": [
-        "libs/logger-lib/src/*"
-      ],
-      "@app/pg-lib": [
-        "libs/pg-lib/src"
-      ],
-      "@app/pg-lib/*": [
-        "libs/pg-lib/src/*"
-      ],
-      "@app/redis-lib": [
-        "libs/redis-lib/src"
-      ],
-      "@app/redis-lib/*": [
-        "libs/redis-lib/src/*"
-      ]
+      "@app/logger-lib": ["libs/logger-lib/src"],
+      "@app/logger-lib/*": ["libs/logger-lib/src/*"],
+      "@app/pg-lib": ["libs/pg-lib/src"],
+      "@app/pg-lib/*": ["libs/pg-lib/src/*"],
+      "@app/redis-lib": ["libs/redis-lib/src"],
+      "@app/redis-lib/*": ["libs/redis-lib/src/*"],
+      "@app/i18n-lib": ["libs/i18n-lib/src"]
     }
   }
 }

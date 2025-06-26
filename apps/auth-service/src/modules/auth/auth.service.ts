@@ -20,6 +20,7 @@ import { Tenant, TenantStatus } from '../tenant/entities/tenant.entity';
 import { Repository } from 'typeorm';
 import { LoginDto } from './dto/login.dto';
 import { SsoLoginDto } from './dto/sso-login.dto';
+import { I18nService } from 'nestjs-i18n';
 
 /**
  * AuthService 提供认证相关的服务（多租户版，带登录增强和SSO）。
@@ -36,6 +37,7 @@ export class AuthService {
     private redisService: RedisLibService,
     private readonly logger: AppLogger,
     @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
+    private readonly i18n: I18nService,
   ) {}
 
   /**
@@ -89,7 +91,7 @@ export class AuthService {
     const captchaEnabled = process.env.ENABLE_CAPTCHA === 'true';
     if (captchaEnabled) {
       if (!captchaId || !captchaText) {
-        throw new BadRequestException('Captcha is required.');
+        throw new BadRequestException(await this.i18n.t('common.captcha_required'));
       }
       const captchaKey = `${this.CAPTCHA_KEY_PREFIX}:${captchaId}`;
       const storedCaptcha = await this.redisService.get(captchaKey);
@@ -98,7 +100,7 @@ export class AuthService {
       await this.redisService.del(captchaKey);
 
       if (!storedCaptcha || storedCaptcha !== captchaText.toLowerCase()) {
-        throw new BadRequestException('Invalid captcha.');
+        throw new BadRequestException(await this.i18n.t('common.invalid_captcha'));
       }
     }
   }
@@ -147,27 +149,23 @@ export class AuthService {
     const tenant = await this.tenantRepository.findOneBy({ slug: tenantSlug });
     if (!tenant) {
       this.logger.warn(`Login attempt for non-existent tenant: ${tenantSlug}`);
-      return null;
+      throw new UnauthorizedException(await this.i18n.t('common.tenant_not_found'));
     }
     if (tenant.status !== TenantStatus.ACTIVE) {
-      this.logger.warn(
-        `Login attempt for inactive tenant: ${tenant.name} (${tenant.slug})`,
-      );
-      throw new UnauthorizedException(`Tenant '${tenant.name}' is not active.`);
+      this.logger.warn(`Login attempt for inactive tenant: ${tenant.name} (${tenant.slug})`);
+      throw new UnauthorizedException(await this.i18n.t('common.tenant_inactive'));
     }
 
     // 2. 在指定租户下查找用户
     const user = await this.userService.findOneByUsername(username, tenant.id);
     if (!user) {
-      return null;
+      throw new UnauthorizedException(await this.i18n.t('common.user_not_found'));
     }
 
     // 3. 检查用户状态
     if (user.status !== UserStatus.ACTIVE) {
-      this.logger.warn(
-        `Login attempt for inactive user: ${username} in tenant ${tenant.name}`,
-      );
-      throw new UnauthorizedException(`User account is not active.`);
+      this.logger.warn(`Login attempt for inactive user: ${username} in tenant ${tenant.name}`);
+      throw new UnauthorizedException(await this.i18n.t('common.user_inactive'));
     }
 
     // 4. 校验密码
@@ -278,7 +276,7 @@ export class AuthService {
         `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`,
       );
     } else {
-      throw new ForbiddenException('SessionId required for user refresh token.');
+      throw new ForbiddenException(await this.i18n.t('common.sessionid_required'));
     }
     if (!storedToken || storedToken !== token) {
       // 如果不一致，说明有安全风险（可能 token 已被盗用或已在别处登录），强制所有会话下线
@@ -294,7 +292,7 @@ export class AuthService {
 
     const user = await this.userService.findOneById(userId, payload.tenantId);
     if (!user) {
-      throw new ForbiddenException('User not found.');
+      throw new ForbiddenException(await this.i18n.t('common.user_not_found'));
     }
 
     // 3. 签发新的 tokens 并更新 Redis
@@ -319,9 +317,7 @@ export class AuthService {
       this.logger.error(
         'SSO configuration (SSO_SHARED_SECRET, SSO_ISSUER) is missing.',
       );
-      throw new InternalServerErrorException(
-        'SSO is not configured correctly.',
-      );
+      throw new InternalServerErrorException(await this.i18n.t('common.sso_not_configured'));
     }
 
     try {
@@ -333,9 +329,7 @@ export class AuthService {
 
       const { sub, email, name, tenantSlug } = payload;
       if (!sub || !email || !tenantSlug) {
-        throw new UnauthorizedException(
-          'Invalid SSO token payload. Missing required fields.',
-        );
+        throw new UnauthorizedException(await this.i18n.t('common.sso_token_invalid'));
       }
 
       // 3. 查找或创建用户
@@ -359,7 +353,7 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Invalid SSO token.');
+      throw new UnauthorizedException(await this.i18n.t('common.sso_token_invalid'));
     }
   }
 

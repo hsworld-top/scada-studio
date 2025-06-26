@@ -11,6 +11,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { FindRolesDto } from './dto/find-roles.dto';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class RoleService {
@@ -20,6 +21,7 @@ export class RoleService {
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     private readonly casbinService: CasbinService,
     private readonly logger: AppLogger,
+    private readonly i18n: I18nService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -32,9 +34,7 @@ export class RoleService {
       tenantId,
     });
     if (existingRole) {
-      throw new ConflictException(
-        `Role with name '${name}' already exists in this tenant.`,
-      );
+      throw new ConflictException(await this.i18n.t('common.role_exists', { args: { name } }));
     }
 
     const role = this.roleRepository.create({ name, description, tenantId });
@@ -72,9 +72,7 @@ export class RoleService {
   async findOne(id: number, tenantId: number): Promise<Role> {
     const role = await this.roleRepository.findOneBy({ id, tenantId });
     if (!role) {
-      throw new NotFoundException(
-        `Role with ID ${id} not found in this tenant.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.role_not_found'));
     }
     return role;
   }
@@ -90,9 +88,7 @@ export class RoleService {
         tenantId,
       });
       if (existingRole) {
-        throw new ConflictException(
-          `Role with name '${name}' already exists in this tenant.`,
-        );
+        throw new ConflictException(await this.i18n.t('common.role_exists', { args: { name } }));
       }
       this.logger.warn(
         `Role name is being changed from '${role.name}' to '${name}'. This can have significant permission implications and may require manual policy updates if not handled carefully.`,

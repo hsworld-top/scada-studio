@@ -24,6 +24,7 @@ import { SetUserStatusDto } from './dto/set-user-status.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { nanoid } from 'nanoid';
+import { I18nService } from 'nestjs-i18n';
 
 interface SsoPayload {
   provider: string;
@@ -44,6 +45,7 @@ export class UserService implements OnModuleInit {
     @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
     private casbinService: CasbinService,
     private readonly logger: AppLogger,
+    private readonly i18n: I18nService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -73,7 +75,7 @@ export class UserService implements OnModuleInit {
 
     const tenant = await this.tenantRepository.findOneBy({ id: tenantId });
     if (!tenant) {
-      throw new NotFoundException(`Tenant with ID ${tenantId} not found.`);
+      throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     }
 
     const orConditions: Array<{
@@ -95,19 +97,13 @@ export class UserService implements OnModuleInit {
       });
       if (existingUser) {
         if (existingUser.username === username) {
-          throw new ConflictException(
-            `User with username '${username}' already exists in this tenant.`,
-          );
+          throw new ConflictException(await this.i18n.t('common.user_exists', { args: { username } }));
         }
         if (email && existingUser.email === email) {
-          throw new ConflictException(
-            `User with email '${email}' already exists in this tenant.`,
-          );
+          throw new ConflictException(await this.i18n.t('common.email_exists', { args: { email } }));
         }
         if (phone && existingUser.phone === phone) {
-          throw new ConflictException(
-            `User with phone '${phone}' already exists in this tenant.`,
-          );
+          throw new ConflictException(await this.i18n.t('common.phone_exists', { args: { phone } }));
         }
       }
     }
@@ -116,9 +112,7 @@ export class UserService implements OnModuleInit {
       where: { name: In(roleNames), tenantId },
     });
     if (roles.length !== roleNames.length) {
-      throw new NotFoundException(
-        'One or more roles do not exist in this tenant.',
-      );
+      throw new NotFoundException(await this.i18n.t('common.role_not_found'));
     }
 
     let groups: Group[] = [];
@@ -127,15 +121,13 @@ export class UserService implements OnModuleInit {
         where: { id: In(groupIds), tenantId },
       });
       if (groups.length !== groupIds.length) {
-        throw new NotFoundException(
-          'One or more groups do not exist in this tenant.',
-        );
+        throw new NotFoundException(await this.i18n.t('common.group_not_found'));
       }
     }
 
     // 密码强度校验
     if (!this.isStrongPassword(password)) {
-      throw new BadRequestException('密码强度不足，需包含大写、小写、数字、特殊字符，且长度不少于8位');
+      throw new BadRequestException(await this.i18n.t('common.password_too_weak'));
     }
 
     const user = this.userRepository.create({
@@ -235,9 +227,7 @@ export class UserService implements OnModuleInit {
       relations: ['roles', 'groups'],
     });
     if (!user) {
-      throw new NotFoundException(
-        `User with ID ${userId} not found in this tenant.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
     }
 
     if (email) user.email = email;
@@ -250,9 +240,7 @@ export class UserService implements OnModuleInit {
         where: { name: In(roleNames), tenantId },
       });
       if (newRoles.length !== roleNames.length) {
-        throw new NotFoundException(
-          'One or more roles do not exist in this tenant.',
-        );
+        throw new NotFoundException(await this.i18n.t('common.role_not_found'));
       }
       user.roles = newRoles;
       await this.casbinService
@@ -288,9 +276,7 @@ export class UserService implements OnModuleInit {
     );
 
     if (result.affected === 0) {
-      throw new NotFoundException(
-        `User with ID ${userId} not found in this tenant.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
     }
 
     return { success: true };
@@ -306,9 +292,7 @@ export class UserService implements OnModuleInit {
     });
 
     if (result.affected === 0) {
-      throw new NotFoundException(
-        `User with ID ${userId} not found in this tenant.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
     }
 
     await this.casbinService.getEnforcer().deleteUser(userId.toString());
@@ -335,9 +319,7 @@ export class UserService implements OnModuleInit {
       relations: ['roles', 'groups', 'tenant'],
     });
     if (!user) {
-      throw new NotFoundException(
-        `User with ID ${id} not found in this tenant.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
     }
     return user;
   }
@@ -366,9 +348,7 @@ export class UserService implements OnModuleInit {
     if (email && email !== user.email) {
       const existing = await this.userRepository.findOneBy({ email, tenantId });
       if (existing) {
-        throw new ConflictException(
-          `Email '${email}' is already in use in this tenant.`,
-        );
+        throw new ConflictException(await this.i18n.t('common.email_exists', { args: { email } }));
       }
       user.email = email;
     }
@@ -376,9 +356,7 @@ export class UserService implements OnModuleInit {
     if (phone && phone !== user.phone) {
       const existing = await this.userRepository.findOneBy({ phone, tenantId });
       if (existing) {
-        throw new ConflictException(
-          `Phone number '${phone}' is already in use in this tenant.`,
-        );
+        throw new ConflictException(await this.i18n.t('common.phone_exists', { args: { phone } }));
       }
       user.phone = phone;
     }
@@ -402,12 +380,12 @@ export class UserService implements OnModuleInit {
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Incorrect old password.');
+      throw new UnauthorizedException(await this.i18n.t('common.incorrect_old_password'));
     }
 
     // 密码强度校验
     if (!this.isStrongPassword(newPassword)) {
-      throw new BadRequestException('密码强度不足，需包含大写、小写、数字、特殊字符，且长度不少于8位');
+      throw new BadRequestException(await this.i18n.t('common.password_too_weak'));
     }
 
     user.password = newPassword;
@@ -428,9 +406,7 @@ export class UserService implements OnModuleInit {
       this.logger.error(
         `SSO failed: Tenant with slug '${tenantSlug}' not found.`,
       );
-      throw new NotFoundException(
-        `Tenant with slug '${tenantSlug}' not found.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     }
 
     const user = await this.userRepository.findOne({
@@ -440,7 +416,7 @@ export class UserService implements OnModuleInit {
 
     if (user) {
       if (user.status !== UserStatus.ACTIVE) {
-        throw new UnauthorizedException('User account is not active.');
+        throw new UnauthorizedException(this.i18n.t('common.user_inactive'));
       }
       return user;
     }
@@ -458,9 +434,7 @@ export class UserService implements OnModuleInit {
       this.logger.error(
         `SSO user creation failed: Default role '${defaultRoleName}' not found in tenant ${tenant.id}.`,
       );
-      throw new InternalServerErrorException(
-        'Default role for new users is not configured.',
-      );
+      throw new InternalServerErrorException(await this.i18n.t('common.default_role_not_configured'));
     }
 
     const randomPassword = nanoid();

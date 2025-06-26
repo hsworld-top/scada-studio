@@ -10,6 +10,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { FindGroupsDto } from './dto/find-groups.dto';
 import { AppLogger } from '@app/logger-lib';
+import { I18nService } from 'nestjs-i18n';
 
 @Injectable()
 export class GroupService {
@@ -20,6 +21,7 @@ export class GroupService {
     @InjectRepository(Group)
     private readonly groupRepository: Repository<Group>,
     private readonly logger: AppLogger,
+    private readonly i18n: I18nService,
   ) {
     this.logger.setContext(this.context);
     this.groupTreeRepository =
@@ -37,9 +39,7 @@ export class GroupService {
 
     const existingGroup = await this.groupRepository.findOneBy(query);
     if (existingGroup) {
-      throw new ConflictException(
-        `Group with name '${name}' already exists under the same parent in this tenant.`,
-      );
+      throw new ConflictException(await this.i18n.t('common.group_exists', { args: { name } }));
     }
 
     let parentGroup: Group | null = null;
@@ -102,9 +102,7 @@ export class GroupService {
   async findOne(id: number, tenantId: number): Promise<Group> {
     const group = await this.groupRepository.findOneBy({ id, tenantId });
     if (!group) {
-      throw new NotFoundException(
-        `Group with ID ${id} not found in this tenant.`,
-      );
+      throw new NotFoundException(await this.i18n.t('common.group_not_found'));
     }
     return group;
   }
@@ -122,7 +120,7 @@ export class GroupService {
         group.parent = null;
       } else {
         if (parentId === id) {
-          throw new ConflictException('A group cannot be its own parent.');
+          throw new ConflictException(await this.i18n.t('common.group_cannot_be_own_parent'));
         }
         const newParent = await this.findOne(parentId, tenantId);
         group.parent = newParent;

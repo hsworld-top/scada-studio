@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant, TenantStatus } from './entities/tenant.entity';
 import { TenantInitializerService } from './tenant-initializer.service';
+import { I18nService } from 'nestjs-i18n';
 
 /**
  * TenantService 提供租户的增删改查和状态管理逻辑。
@@ -13,6 +14,7 @@ export class TenantService {
     @InjectRepository(Tenant)
     private readonly tenantRepository: Repository<Tenant>,
     private readonly tenantInitializerService: TenantInitializerService,
+    private readonly i18n: I18nService,
   ) {}
 
   /**
@@ -24,7 +26,7 @@ export class TenantService {
     // 检查名称和slug唯一性
     const exist = await this.tenantRepository.findOne({ where: [{ name }, { slug }] });
     if (exist) {
-      throw new BadRequestException('租户名称或标识符已存在');
+      throw new BadRequestException(await this.i18n.t('common.tenant_exists'));
     }
     const tenant = this.tenantRepository.create({ name, slug });
     const newTenant = await this.tenantRepository.save(tenant);
@@ -41,7 +43,7 @@ export class TenantService {
    */
   async updateTenant(id: number, name: string, slug: string): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
-    if (!tenant) throw new NotFoundException('租户不存在');
+    if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     tenant.name = name;
     tenant.slug = slug;
     return this.tenantRepository.save(tenant);
@@ -53,7 +55,7 @@ export class TenantService {
    */
   async deleteTenant(id: number): Promise<void> {
     const result = await this.tenantRepository.delete(id);
-    if (result.affected === 0) throw new NotFoundException('租户不存在');
+    if (result.affected === 0) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
   }
 
   /**
@@ -62,7 +64,7 @@ export class TenantService {
    */
   async findTenantById(id: number): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
-    if (!tenant) throw new NotFoundException('租户不存在');
+    if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     return tenant;
   }
 
@@ -80,7 +82,7 @@ export class TenantService {
    */
   async changeStatus(id: number, status: TenantStatus): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
-    if (!tenant) throw new NotFoundException('租户不存在');
+    if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     tenant.status = status;
     return this.tenantRepository.save(tenant);
   }
