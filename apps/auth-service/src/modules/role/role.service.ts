@@ -2,8 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,7 +11,6 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { FindRolesDto } from './dto/find-roles.dto';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
-import { UserService } from '../user/user.service';
 
 @Injectable()
 export class RoleService {
@@ -23,8 +20,6 @@ export class RoleService {
     @InjectRepository(Role) private roleRepository: Repository<Role>,
     private readonly casbinService: CasbinService,
     private readonly logger: AppLogger,
-    @Inject(forwardRef(() => UserService))
-    private readonly userService: UserService,
   ) {
     this.logger.setContext(this.context);
   }

@@ -3,10 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { User } from './modules/user/entities/user.entity';
-import { Role } from './modules/user/entities/role.entity';
-import { Group } from './modules/user/entities/group.entity';
-import { Tenant } from './modules/tenant/entities/tenant.entity';
 import { RedisLibModule } from '@app/redis-lib';
 import { PgLibModule, PgLibService } from '@app/pg-lib';
 import { LoggerLibModule } from '@app/logger-lib';
@@ -15,7 +11,7 @@ import { TenantModule } from './modules/tenant/tenant.module';
 import { GroupModule } from './modules/group/group.module';
 import { RoleModule } from './modules/role/role.module';
 import { PermissionModule } from './modules/permission/permission.module';
-
+import { SharedDatabaseModule } from './common/database/database.module'; // 导入共享数据库模块
 @Module({
   imports: [
     LoggerLibModule.forRoot({
@@ -30,8 +26,7 @@ import { PermissionModule } from './modules/permission/permission.module';
       useExisting: PgLibService,
       inject: [PgLibService],
     }),
-    // 注册所有实体，以便在任何地方使用 Repository
-    TypeOrmModule.forFeature([User, Role, Tenant, Group]),
+    SharedDatabaseModule, //  使用共享数据库模块
     RedisLibModule.register(),
 
     // 业务模块

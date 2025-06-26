@@ -20,7 +20,6 @@ import { AppLogger } from '@app/logger-lib';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Tenant, TenantStatus } from '../tenant/entities/tenant.entity';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dto/login.dto';
 import { SsoLoginDto } from './dto/sso-login.dto';
 
@@ -36,7 +35,6 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
-    private readonly configService: ConfigService,
     @Inject(forwardRef(() => RedisLibService))
     private redisService: RedisLibService,
     private readonly logger: AppLogger,
@@ -58,10 +56,7 @@ export class AuthService {
 
     const captchaId = nanoid();
     const captchaKey = `${this.CAPTCHA_KEY_PREFIX}:${captchaId}`;
-    const captchaTTL = this.configService.get<number>(
-      'CAPTCHA_TTL_SECONDS',
-      300,
-    ); // 5分钟有效期
+    const captchaTTL = Number(process.env.CAPTCHA_TTL_SECONDS || 300); // 5分钟有效期
 
     // 将验证码文本（小写）存入 Redis
     await this.redisService.set(
@@ -82,7 +77,7 @@ export class AuthService {
     const { tenantSlug, username, captchaId, captchaText } = loginDto;
 
     // 1. 检查登录失败锁定
-    const maxAttempts = this.configService.get<number>('LOGIN_MAX_ATTEMPTS', 5);
+    const maxAttempts = Number(process.env.LOGIN_MAX_ATTEMPTS || 5);
     const attemptsKey = `${this.LOGIN_ATTEMPTS_KEY_PREFIX}:${tenantSlug}:${username}`;
     const attempts = await this.redisService.get(attemptsKey);
 
@@ -94,8 +89,7 @@ export class AuthService {
     }
 
     // 2. 检查是否需要验证码
-    const captchaEnabled =
-      this.configService.get<string>('ENABLE_CAPTCHA') === 'true';
+    const captchaEnabled = process.env.ENABLE_CAPTCHA === 'true';
     if (captchaEnabled) {
       if (!captchaId || !captchaText) {
         throw new BadRequestException('Captcha is required.');
@@ -129,9 +123,8 @@ export class AuthService {
       await this.redisService.del(attemptsKey);
     } else {
       // 登录失败，增加失败计数
-      const lockDuration = this.configService.get<number>(
-        'LOGIN_LOCK_DURATION_SECONDS',
-        900,
+      const lockDuration = Number(
+        process.env.LOGIN_LOCK_DURATION_SECONDS || 900,
       ); // 15分钟
       const newCount = await this.redisService.client.incr(attemptsKey);
       if (newCount === 1) {
@@ -243,10 +236,12 @@ export class AuthService {
     try {
       // 1. 验证 Refresh Token 的签名和时效
       payload = await this.jwtService.verify(token, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: process.env.JWT_REFRESH_SECRET,
       });
     } catch (error) {
-      throw new ForbiddenException('Invalid or expired refresh token.');
+      throw new ForbiddenException(
+        'Invalid or expired refresh token.' + error.message,
+      );
     }
 
     const { sub: userId } = payload;
@@ -283,8 +278,8 @@ export class AuthService {
     const { token } = ssoLoginDto;
 
     // 1. 获取 SSO 配置
-    const ssoSecret = this.configService.get<string>('SSO_SHARED_SECRET');
-    const ssoIssuer = this.configService.get<string>('SSO_ISSUER');
+    const ssoSecret = process.env.SSO_SHARED_SECRET;
+    const ssoIssuer = process.env.SSO_ISSUER;
 
     if (!ssoSecret || !ssoIssuer) {
       this.logger.error(
@@ -350,21 +345,15 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: this.configService.get<string>(
-          'JWT_ACCESS_TOKEN_TTL',
-          '15m',
-        ),
+        secret: process.env.JWT_SECRET,
+        expiresIn: process.env.JWT_ACCESS_TOKEN_TTL,
       }),
       this.jwtService.signAsync(
         { sub: user.id!.toString(), tenantId: user.tenantId },
         {
           // refresh token 只包含必要信息
-          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-          expiresIn: this.configService.get<string>(
-            'JWT_REFRESH_TOKEN_TTL',
-            '7d',
-          ),
+          secret: process.env.JWT_REFRESH_SECRET,
+          expiresIn: process.env.JWT_REFRESH_TOKEN_TTL,
         },
       ),
     ]);
@@ -382,7 +371,7 @@ export class AuthService {
    */
   private async _storeRefreshToken(userId: number, token: string) {
     const ttlInSeconds = this._parseTtl(
-      this.configService.get<string>('JWT_REFRESH_TOKEN_TTL', '7d'),
+      process.env.JWT_REFRESH_TOKEN_TTL || '7d',
     );
     await this.redisService.set(
       `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
