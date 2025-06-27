@@ -7,9 +7,14 @@ import { TenantInitializerService } from './tenant-initializer.service';
 import { TenantService } from './tenant.service';
 import { TenantController } from './tenant.controller';
 import { CasbinModule } from '../casbin/casbin.module';
+import { AuditLogModule } from '../audit/audit-log.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tenant, User, Role]), CasbinModule],
+  imports: [
+    TypeOrmModule.forFeature([Tenant, User, Role]),
+    CasbinModule,
+    AuditLogModule,
+  ],
   providers: [TenantService, TenantInitializerService],
   controllers: [TenantController],
   exports: [TypeOrmModule, TenantService, TenantInitializerService],

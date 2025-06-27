@@ -11,6 +11,7 @@ import { UpdateGroupDto } from './dto/update-group.dto';
 import { FindGroupsDto } from './dto/find-groups.dto';
 import { AppLogger } from '@app/logger-lib';
 import { I18nService } from 'nestjs-i18n';
+import { AuditLogService } from '../audit/audit-log.service';
 
 @Injectable()
 export class GroupService {
@@ -22,6 +23,7 @@ export class GroupService {
     private readonly groupRepository: Repository<Group>,
     private readonly logger: AppLogger,
     private readonly i18n: I18nService,
+    private readonly auditLogService: AuditLogService,
   ) {
     this.logger.setContext(this.context);
     this.groupTreeRepository =
@@ -55,7 +57,17 @@ export class GroupService {
     });
 
     this.logger.log(`Creating group '${name}' in tenant ${tenantId}`);
-    return this.groupRepository.save(group);
+    const savedGroup = await this.groupRepository.save(group);
+    await this.auditLogService.audit({
+      userId: createGroupDto.operatorId,
+      tenantId,
+      action: 'create',
+      resource: 'group',
+      targetId: savedGroup.id.toString(),
+      detail: { ...createGroupDto },
+      result: 'success',
+    });
+    return savedGroup;
   }
 
   async findAll(
@@ -127,10 +139,20 @@ export class GroupService {
       }
     }
 
-    return this.groupRepository.save(group);
+    const updatedGroup = await this.groupRepository.save(group);
+    await this.auditLogService.audit({
+      userId: updateGroupDto.operatorId,
+      tenantId,
+      action: 'update',
+      resource: 'group',
+      targetId: id.toString(),
+      detail: { ...updateGroupDto },
+      result: 'success',
+    });
+    return updatedGroup;
   }
 
-  async remove(id: number, tenantId: number): Promise<{ success: boolean }> {
+  async remove(id: number, tenantId: number, operatorId?: number): Promise<{ success: boolean }> {
     const group = await this.findOne(id, tenantId);
 
     const childrenCount =
@@ -146,6 +168,14 @@ export class GroupService {
       `Deleted group '${group.name}' (ID: ${id}) from tenant ${tenantId}.`,
     );
 
+    await this.auditLogService.audit({
+      userId: operatorId,
+      tenantId,
+      action: 'delete',
+      resource: 'group',
+      targetId: id.toString(),
+      result: 'success',
+    });
     return { success: true };
   }
 }

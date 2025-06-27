@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsOptional, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class PermissionDto {
@@ -18,10 +18,14 @@ export class UpdatePermissionsDto {
 
   @IsString()
   @IsNotEmpty()
-  tenantId: string;
+  tenantId: number;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PermissionDto)
   permissions: PermissionDto[];
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

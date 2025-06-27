@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Tenant, TenantStatus } from './entities/tenant.entity';
 import { TenantInitializerService } from './tenant-initializer.service';
 import { I18nService } from 'nestjs-i18n';
+import { AuditLogService } from '../audit/audit-log.service';
 
 /**
  * TenantService 提供租户的增删改查和状态管理逻辑。
@@ -15,6 +16,7 @@ export class TenantService {
     private readonly tenantRepository: Repository<Tenant>,
     private readonly tenantInitializerService: TenantInitializerService,
     private readonly i18n: I18nService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -22,7 +24,7 @@ export class TenantService {
    * @param name 租户名称
    * @param slug 租户唯一标识符
    */
-  async createTenant(name: string, slug: string): Promise<Tenant> {
+  async createTenant(name: string, slug: string, operatorId?: number): Promise<Tenant> {
     // 检查名称和slug唯一性
     const exist = await this.tenantRepository.findOne({ where: [{ name }, { slug }] });
     if (exist) {
@@ -32,6 +34,14 @@ export class TenantService {
     const newTenant = await this.tenantRepository.save(tenant);
     // 新建租户后初始化角色、策略和超级管理员
     await this.tenantInitializerService.initTenantData(newTenant);
+    await this.auditLogService.audit({
+      userId: operatorId,
+      action: 'create',
+      resource: 'tenant',
+      targetId: newTenant.id.toString(),
+      detail: { name, slug },
+      result: 'success',
+    });
     return newTenant;
   }
 
@@ -41,11 +51,19 @@ export class TenantService {
    * @param name 新名称
    * @param slug 新标识符
    */
-  async updateTenant(id: number, name: string, slug: string): Promise<Tenant> {
+  async updateTenant(id: number, name: string, slug: string, operatorId?: number): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     tenant.name = name;
     tenant.slug = slug;
+    await this.auditLogService.audit({
+      userId: operatorId,
+      action: 'update',
+      resource: 'tenant',
+      targetId: id.toString(),
+      detail: { name, slug },
+      result: 'success',
+    });
     return this.tenantRepository.save(tenant);
   }
 
@@ -53,9 +71,16 @@ export class TenantService {
    * 删除租户（物理删除）。
    * @param id 租户ID
    */
-  async deleteTenant(id: number): Promise<void> {
+  async deleteTenant(id: number, operatorId?: number): Promise<void> {
     const result = await this.tenantRepository.delete(id);
     if (result.affected === 0) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+    await this.auditLogService.audit({
+      userId: operatorId,
+      action: 'delete',
+      resource: 'tenant',
+      targetId: id.toString(),
+      result: 'success',
+    });
   }
 
   /**
@@ -80,10 +105,18 @@ export class TenantService {
    * @param id 租户ID
    * @param status 新状态
    */
-  async changeStatus(id: number, status: TenantStatus): Promise<Tenant> {
+  async changeStatus(id: number, status: TenantStatus, operatorId?: number): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
     tenant.status = status;
+    await this.auditLogService.audit({
+      userId: operatorId,
+      action: 'changeStatus',
+      resource: 'tenant',
+      targetId: id.toString(),
+      detail: { status },
+      result: 'success',
+    });
     return this.tenantRepository.save(tenant);
   }
 }

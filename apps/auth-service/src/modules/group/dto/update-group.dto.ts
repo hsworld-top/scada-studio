@@ -21,4 +21,8 @@ export class UpdateGroupDto {
   @IsInt()
   @IsNotEmpty()
   tenantId: number;
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

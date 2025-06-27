@@ -44,4 +44,8 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

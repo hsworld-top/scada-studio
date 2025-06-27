@@ -12,4 +12,8 @@ export class CreateRoleDto {
   @IsInt()
   @IsNotEmpty()
   tenantId: number;
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

@@ -21,6 +21,7 @@ import { Repository } from 'typeorm';
 import { LoginDto } from './dto/login.dto';
 import { SsoLoginDto } from './dto/sso-login.dto';
 import { I18nService } from 'nestjs-i18n';
+import { AuditLogService } from '../audit/audit-log.service';
 
 /**
  * AuthService 提供认证相关的服务（多租户版，带登录增强和SSO）。
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly logger: AppLogger,
     @InjectRepository(Tenant) private tenantRepository: Repository<Tenant>,
     private readonly i18n: I18nService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -184,7 +186,7 @@ export class AuthService {
    * @param user 用户信息
    * @returns 包含 access_token、refresh_token、sessionId（普通用户） 的对象
    */
-  async login(user: Partial<User>) {
+  async login(user: Partial<User>, ip?: string) {
     // 判断是否为管理员（通过角色名 'admin'）
     const isAdmin = user.roles?.some((role) => role.name === 'admin');
     // 普通用户多端登录，生成唯一 sessionId
@@ -196,6 +198,17 @@ export class AuthService {
     const tokens = await this._generateTokens(user, sessionId);
     // 存储 refresh token，管理员单点登录覆盖写入，普通用户多端写入
     await this._storeRefreshToken(user.id!, tokens.refreshToken, !!isAdmin, sessionId);
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: user.id,
+      tenantId: user.tenantId,
+      action: 'login',
+      resource: 'user',
+      targetId: user.id?.toString(),
+      result: 'success',
+      ip,
+      detail: { username: user.username },
+    });
     // 返回 sessionId 便于前端后续刷新/登出
     return { ...tokens, sessionId };
   }
@@ -206,7 +219,7 @@ export class AuthService {
    * @param accessToken 需要作废的 access_token
    * @param sessionId 普通用户需带 sessionId
    */
-  async logout(accessToken: string, sessionId?: string): Promise<void> {
+  async logout(accessToken: string, sessionId?: string, operatorId?: number, ip?: string): Promise<void> {
     try {
       const decoded = this.jwtService.decode(accessToken);
       if (!decoded || !decoded.exp) return;
@@ -234,6 +247,16 @@ export class AuthService {
       this.logger.log(
         `User ${userId} logged out and refresh token was revoked.`,
       );
+      // 自动审计
+      await this.auditLogService.audit({
+        userId: operatorId || userId,
+        tenantId: decoded.tenantId,
+        action: 'logout',
+        resource: 'user',
+        targetId: userId?.toString(),
+        result: 'success',
+        ip,
+      });
     } catch (error) {
       this.logger.error(
         'Error during logout process',
@@ -249,7 +272,7 @@ export class AuthService {
    * @param sessionId 普通用户需带 sessionId
    * @returns 新的 access_token、refresh_token、sessionId
    */
-  async refreshToken(token: string, sessionId?: string) {
+  async refreshToken(token: string, sessionId?: string, operatorId?: number, ip?: string) {
     let payload;
     try {
       // 1. 验证 Refresh Token 的签名和时效
@@ -298,7 +321,16 @@ export class AuthService {
     // 3. 签发新的 tokens 并更新 Redis
     const tokens = await this._generateTokens(user, sessionId);
     await this._storeRefreshToken(user.id, tokens.refreshToken, isAdmin, sessionId);
-
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: operatorId || user.id,
+      tenantId: user.tenantId,
+      action: 'refreshToken',
+      resource: 'user',
+      targetId: user.id?.toString(),
+      result: 'success',
+      ip,
+    });
     return { ...tokens, sessionId };
   }
   /**
@@ -306,7 +338,7 @@ export class AuthService {
    * @param ssoLoginDto
    * @returns 登录成功后我们系统自己的 token
    */
-  async ssoLogin(ssoLoginDto: SsoLoginDto) {
+  async ssoLogin(ssoLoginDto: SsoLoginDto, ip?: string) {
     const { token } = ssoLoginDto;
 
     // 1. 获取 SSO 配置
@@ -342,11 +374,21 @@ export class AuthService {
       });
 
       // 4. 为用户生成我们系统的 Token
-      const tokens = await this.login(user);
+      const tokens = await this.login(user, ip);
       this.logger.log(
         `User '${user.username}' logged in via SSO from issuer '${ssoIssuer}'.`,
       );
-
+      // 自动审计
+      await this.auditLogService.audit({
+        userId: user.id,
+        tenantId: user.tenantId,
+        action: 'ssoLogin',
+        resource: 'user',
+        targetId: user.id?.toString(),
+        result: 'success',
+        ip,
+        detail: { username: user.username, provider: ssoIssuer },
+      });
       return { success: true, data: tokens };
     } catch (error) {
       this.logger.error('SSO login failed.', error.stack, 'AuthService');

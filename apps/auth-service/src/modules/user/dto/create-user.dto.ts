@@ -44,4 +44,8 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

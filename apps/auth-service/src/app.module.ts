@@ -13,6 +13,7 @@ import { RoleModule } from './modules/role/role.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { SharedDatabaseModule } from './common/database/database.module'; // 导入共享数据库模块
 import { I18nLibModule } from '@app/i18n-lib';
+import { AuditLogModule } from './modules/audit/audit-log.module';
 @Module({
   imports: [
     I18nLibModule,
@@ -39,6 +40,7 @@ import { I18nLibModule } from '@app/i18n-lib';
     CasbinModule,
     RoleModule,
     PermissionModule,
+    AuditLogModule,
   ],
 })
 export class AppModule {}

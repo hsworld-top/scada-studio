@@ -27,4 +27,8 @@ export class UpdateProfileDto {
   @IsInt()
   @IsNotEmpty()
   tenantId: number;
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

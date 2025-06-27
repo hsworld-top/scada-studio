@@ -1,4 +1,4 @@
-import { IsInt, IsEnum, IsNotEmpty } from 'class-validator';
+import { IsInt, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
 import { UserStatus } from '../entities/user.entity';
 
 export class SetUserStatusDto {
@@ -13,4 +13,8 @@ export class SetUserStatusDto {
   @IsInt()
   @IsNotEmpty()
   tenantId: number;
+
+  @IsOptional()
+  @IsInt()
+  operatorId?: number;
 }

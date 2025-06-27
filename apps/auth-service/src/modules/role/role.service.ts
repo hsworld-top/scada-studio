@@ -12,6 +12,7 @@ import { FindRolesDto } from './dto/find-roles.dto';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
 import { I18nService } from 'nestjs-i18n';
+import { AuditLogService } from '../audit/audit-log.service';
 
 @Injectable()
 export class RoleService {
@@ -22,6 +23,7 @@ export class RoleService {
     private readonly casbinService: CasbinService,
     private readonly logger: AppLogger,
     private readonly i18n: I18nService,
+    private readonly auditLogService: AuditLogService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -39,7 +41,17 @@ export class RoleService {
 
     const role = this.roleRepository.create({ name, description, tenantId });
     this.logger.log(`Creating role '${name}' in tenant ${tenantId}`);
-    return this.roleRepository.save(role);
+    const savedRole = await this.roleRepository.save(role);
+    await this.auditLogService.audit({
+      userId: createRoleDto.operatorId,
+      tenantId,
+      action: 'create',
+      resource: 'role',
+      targetId: savedRole.id.toString(),
+      detail: { ...createRoleDto },
+      result: 'success',
+    });
+    return savedRole;
   }
 
   async findAll(
@@ -100,10 +112,20 @@ export class RoleService {
       role.description = description;
     }
 
-    return this.roleRepository.save(role);
+    const updatedRole = await this.roleRepository.save(role);
+    await this.auditLogService.audit({
+      userId: updateRoleDto.operatorId,
+      tenantId,
+      action: 'update',
+      resource: 'role',
+      targetId: id.toString(),
+      detail: { ...updateRoleDto },
+      result: 'success',
+    });
+    return updatedRole;
   }
 
-  async remove(id: number, tenantId: number): Promise<{ success: boolean }> {
+  async remove(id: number, tenantId: number, operatorId?: number): Promise<{ success: boolean }> {
     const role = await this.findOne(id, tenantId);
 
     // It is a good practice to check if the role is still in use before deleting.
@@ -120,6 +142,14 @@ export class RoleService {
       `Deleted role '${role.name}' (ID: ${id}) and its associated policies from tenant ${tenantId}.`,
     );
 
+    await this.auditLogService.audit({
+      userId: operatorId,
+      tenantId,
+      action: 'delete',
+      resource: 'role',
+      targetId: id.toString(),
+      result: 'success',
+    });
     return { success: true };
   }
 }

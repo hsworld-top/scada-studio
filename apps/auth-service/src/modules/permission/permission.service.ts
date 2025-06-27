@@ -3,6 +3,7 @@ import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
 import { SYSTEM_PERMISSIONS } from './permission.constants';
 import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { AuditLogService } from '../audit/audit-log.service';
 
 @Injectable()
 export class PermissionService {
@@ -11,6 +12,7 @@ export class PermissionService {
   constructor(
     private readonly casbinService: CasbinService,
     private readonly logger: AppLogger,
+    private readonly auditLogService: AuditLogService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -33,17 +35,17 @@ export class PermissionService {
     const { roleName, permissions, tenantId } = updatePermissionsDto;
     const enforcer = this.casbinService.getEnforcer();
 
-    await enforcer.removeFilteredPolicy(0, roleName, tenantId);
+    await enforcer.removeFilteredPolicy(0, roleName, String(tenantId));
     this.logger.log(
       `Removed old permissions for role '${roleName}' in tenant '${tenantId}'.`,
     );
 
     if (permissions && permissions.length > 0) {
       const newPolicies = permissions.map((p) => [
-        roleName,
-        tenantId,
-        p.resource,
-        p.action,
+        String(roleName),
+        String(tenantId),
+        String(p.resource),
+        String(p.action),
       ]);
       await enforcer.addPolicies(newPolicies);
       this.logger.log(
@@ -53,6 +55,15 @@ export class PermissionService {
 
     await enforcer.savePolicy();
 
+    await this.auditLogService.audit({
+      userId: updatePermissionsDto.operatorId,
+      tenantId: updatePermissionsDto.tenantId,
+      action: 'updatePermissions',
+      resource: 'role',
+      targetId: updatePermissionsDto.roleName,
+      detail: { permissions: updatePermissionsDto.permissions },
+      result: 'success',
+    });
     return { success: true };
   }
 }

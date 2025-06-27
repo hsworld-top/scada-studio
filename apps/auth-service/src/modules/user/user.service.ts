@@ -25,6 +25,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { nanoid } from 'nanoid';
 import { I18nService } from 'nestjs-i18n';
+import { AuditLogService } from '../audit/audit-log.service';
 
 interface SsoPayload {
   provider: string;
@@ -46,6 +47,7 @@ export class UserService implements OnModuleInit {
     private casbinService: CasbinService,
     private readonly logger: AppLogger,
     private readonly i18n: I18nService,
+    private readonly auditLogService: AuditLogService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -153,6 +155,16 @@ export class UserService implements OnModuleInit {
       `Successfully created user: ${username} in tenant ${tenantId}`,
     );
     const { password: _, ...result } = savedUser;
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: createUserDto.operatorId,
+      tenantId,
+      action: 'create',
+      resource: 'user',
+      targetId: savedUser.id.toString(),
+      detail: { ...createUserDto, password: undefined },
+      result: 'success',
+    });
     return result as User;
   }
 
@@ -263,6 +275,16 @@ export class UserService implements OnModuleInit {
 
     const updatedUser = await this.userRepository.save(user);
     const { password: _password, ...result } = updatedUser;
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: updateUserDto.operatorId,
+      tenantId,
+      action: 'update',
+      resource: 'user',
+      targetId: userId.toString(),
+      detail: { ...updateUserDto },
+      result: 'success',
+    });
     return result as User;
   }
 
@@ -279,12 +301,23 @@ export class UserService implements OnModuleInit {
       throw new NotFoundException(await this.i18n.t('common.user_not_found'));
     }
 
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: setUserStatusDto.operatorId,
+      tenantId,
+      action: 'setStatus',
+      resource: 'user',
+      targetId: userId.toString(),
+      detail: { ...setUserStatusDto },
+      result: 'success',
+    });
     return { success: true };
   }
 
   async remove(
     userId: number,
     tenantId: number,
+    operatorId?: number,
   ): Promise<{ success: boolean }> {
     const result = await this.userRepository.softDelete({
       id: userId,
@@ -300,6 +333,15 @@ export class UserService implements OnModuleInit {
       `Soft deleted user ${userId} and cleared their casbin policies.`,
     );
 
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: operatorId,
+      tenantId,
+      action: 'delete',
+      resource: 'user',
+      targetId: userId.toString(),
+      result: 'success',
+    });
     return { success: true };
   }
 
@@ -367,6 +409,16 @@ export class UserService implements OnModuleInit {
 
     const updatedUser = await this.userRepository.save(user);
     const { password: _password, ...result } = updatedUser;
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: updateProfileDto.currentUserId,
+      tenantId: updateProfileDto.tenantId,
+      action: 'updateProfile',
+      resource: 'user',
+      targetId: updateProfileDto.currentUserId.toString(),
+      detail: { ...updateProfileDto },
+      result: 'success',
+    });
     return result;
   }
 
@@ -395,6 +447,16 @@ export class UserService implements OnModuleInit {
       `User ${user.username} (ID: ${user.id}) changed their password.`,
     );
 
+    // 自动审计
+    await this.auditLogService.audit({
+      userId: changePasswordDto.currentUserId,
+      tenantId: changePasswordDto.tenantId,
+      action: 'changePassword',
+      resource: 'user',
+      targetId: changePasswordDto.currentUserId.toString(),
+      detail: {},
+      result: 'success',
+    });
     return { success: true };
   }
 
