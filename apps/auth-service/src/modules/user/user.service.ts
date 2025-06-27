@@ -60,7 +60,9 @@ export class UserService implements OnModuleInit {
    * 校验密码强度：必须包含大写、小写、数字、特殊字符，且长度>=8
    */
   private isStrongPassword(password: string): boolean {
-    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(password);
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(
+      password,
+    );
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -77,7 +79,7 @@ export class UserService implements OnModuleInit {
 
     const tenant = await this.tenantRepository.findOneBy({ id: tenantId });
     if (!tenant) {
-      throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
     }
 
     const orConditions: Array<{
@@ -99,13 +101,19 @@ export class UserService implements OnModuleInit {
       });
       if (existingUser) {
         if (existingUser.username === username) {
-          throw new ConflictException(await this.i18n.t('common.user_exists', { args: { username } }));
+          throw new ConflictException(
+            this.i18n.t('common.user_exists', { args: { username } }),
+          );
         }
         if (email && existingUser.email === email) {
-          throw new ConflictException(await this.i18n.t('common.email_exists', { args: { email } }));
+          throw new ConflictException(
+            this.i18n.t('common.email_exists', { args: { email } }),
+          );
         }
         if (phone && existingUser.phone === phone) {
-          throw new ConflictException(await this.i18n.t('common.phone_exists', { args: { phone } }));
+          throw new ConflictException(
+            this.i18n.t('common.phone_exists', { args: { phone } }),
+          );
         }
       }
     }
@@ -114,7 +122,7 @@ export class UserService implements OnModuleInit {
       where: { name: In(roleNames), tenantId },
     });
     if (roles.length !== roleNames.length) {
-      throw new NotFoundException(await this.i18n.t('common.role_not_found'));
+      throw new NotFoundException(this.i18n.t('common.role_not_found'));
     }
 
     let groups: Group[] = [];
@@ -123,13 +131,13 @@ export class UserService implements OnModuleInit {
         where: { id: In(groupIds), tenantId },
       });
       if (groups.length !== groupIds.length) {
-        throw new NotFoundException(await this.i18n.t('common.group_not_found'));
+        throw new NotFoundException(this.i18n.t('common.group_not_found'));
       }
     }
 
     // 密码强度校验
     if (!this.isStrongPassword(password)) {
-      throw new BadRequestException(await this.i18n.t('common.password_too_weak'));
+      throw new BadRequestException(this.i18n.t('common.password_too_weak'));
     }
 
     const user = this.userRepository.create({
@@ -239,7 +247,7 @@ export class UserService implements OnModuleInit {
       relations: ['roles', 'groups'],
     });
     if (!user) {
-      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('common.user_not_found'));
     }
 
     if (email) user.email = email;
@@ -252,7 +260,7 @@ export class UserService implements OnModuleInit {
         where: { name: In(roleNames), tenantId },
       });
       if (newRoles.length !== roleNames.length) {
-        throw new NotFoundException(await this.i18n.t('common.role_not_found'));
+        throw new NotFoundException(this.i18n.t('common.role_not_found'));
       }
       user.roles = newRoles;
       await this.casbinService
@@ -298,7 +306,7 @@ export class UserService implements OnModuleInit {
     );
 
     if (result.affected === 0) {
-      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('common.user_not_found'));
     }
 
     // 自动审计
@@ -325,7 +333,7 @@ export class UserService implements OnModuleInit {
     });
 
     if (result.affected === 0) {
-      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('common.user_not_found'));
     }
 
     await this.casbinService.getEnforcer().deleteUser(userId.toString());
@@ -361,7 +369,7 @@ export class UserService implements OnModuleInit {
       relations: ['roles', 'groups', 'tenant'],
     });
     if (!user) {
-      throw new NotFoundException(await this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('common.user_not_found'));
     }
     return user;
   }
@@ -390,7 +398,9 @@ export class UserService implements OnModuleInit {
     if (email && email !== user.email) {
       const existing = await this.userRepository.findOneBy({ email, tenantId });
       if (existing) {
-        throw new ConflictException(await this.i18n.t('common.email_exists', { args: { email } }));
+        throw new ConflictException(
+          this.i18n.t('common.email_exists', { args: { email } }),
+        );
       }
       user.email = email;
     }
@@ -398,7 +408,9 @@ export class UserService implements OnModuleInit {
     if (phone && phone !== user.phone) {
       const existing = await this.userRepository.findOneBy({ phone, tenantId });
       if (existing) {
-        throw new ConflictException(await this.i18n.t('common.phone_exists', { args: { phone } }));
+        throw new ConflictException(
+          this.i18n.t('common.phone_exists', { args: { phone } }),
+        );
       }
       user.phone = phone;
     }
@@ -432,12 +444,14 @@ export class UserService implements OnModuleInit {
 
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException(await this.i18n.t('common.incorrect_old_password'));
+      throw new UnauthorizedException(
+        this.i18n.t('common.incorrect_old_password'),
+      );
     }
 
     // 密码强度校验
     if (!this.isStrongPassword(newPassword)) {
-      throw new BadRequestException(await this.i18n.t('common.password_too_weak'));
+      throw new BadRequestException(this.i18n.t('common.password_too_weak'));
     }
 
     user.password = newPassword;
@@ -468,7 +482,7 @@ export class UserService implements OnModuleInit {
       this.logger.error(
         `SSO failed: Tenant with slug '${tenantSlug}' not found.`,
       );
-      throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
     }
 
     const user = await this.userRepository.findOne({
@@ -496,7 +510,9 @@ export class UserService implements OnModuleInit {
       this.logger.error(
         `SSO user creation failed: Default role '${defaultRoleName}' not found in tenant ${tenant.id}.`,
       );
-      throw new InternalServerErrorException(await this.i18n.t('common.default_role_not_configured'));
+      throw new InternalServerErrorException(
+        this.i18n.t('common.default_role_not_configured'),
+      );
     }
 
     const randomPassword = nanoid();
@@ -537,10 +553,16 @@ export class UserService implements OnModuleInit {
     const tenantId = tenant.id;
     const tenantIdStr = tenant.id.toString();
     const rolesToSeed = ['super-admin', 'developer'];
-    const existingRolesCount = await this.roleRepository.count({ where: { tenantId } });
+    const existingRolesCount = await this.roleRepository.count({
+      where: { tenantId },
+    });
     if (existingRolesCount === 0) {
       this.logger.log(`Seeding initial roles for tenant ${tenantId}...`);
-      const roleEntities = rolesToSeed.map((name) => ({ name, tenantId, description: `The ${name} role` }));
+      const roleEntities = rolesToSeed.map((name) => ({
+        name,
+        tenantId,
+        description: `The ${name} role`,
+      }));
       await this.roleRepository.save(roleEntities);
       this.logger.log('Initial roles seeded.');
     }
@@ -573,7 +595,9 @@ export class UserService implements OnModuleInit {
         await enforcer.addPolicy(...p);
       }
     }
-    const adminExists = await this.userRepository.findOne({ where: { username: 'admin', tenantId } });
+    const adminExists = await this.userRepository.findOne({
+      where: { username: 'admin', tenantId },
+    });
     if (!adminExists) {
       this.logger.log(`Seeding super admin for tenant ${tenantId}...`);
       await this.create({

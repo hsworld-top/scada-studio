@@ -41,7 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
     if (!token) {
       this.logger.warn('No token found in request during JWT validation.');
-      throw new UnauthorizedException(await this.i18n.t('common.jwt_no_token'));
+      throw new UnauthorizedException(this.i18n.t('common.jwt_no_token'));
     }
 
     const isBlacklisted = await this.redisService.get(`blacklist:${token}`);
@@ -49,12 +49,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       this.logger.warn(
         `Attempted to use a blacklisted token for user: ${payload.username}`,
       );
-      throw new UnauthorizedException(await this.i18n.t('common.jwt_token_invalidated'));
+      throw new UnauthorizedException(
+        this.i18n.t('common.jwt_token_invalidated'),
+      );
     }
 
     if (!payload.tenantId) {
       this.logger.error('JWT payload is missing tenantId.', '', 'JwtStrategy');
-      throw new UnauthorizedException(await this.i18n.t('common.jwt_missing_tenant'));
+      throw new UnauthorizedException(this.i18n.t('common.jwt_missing_tenant'));
     }
 
     return {

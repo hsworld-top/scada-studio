@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant, TenantStatus } from './entities/tenant.entity';
@@ -24,11 +28,17 @@ export class TenantService {
    * @param name 租户名称
    * @param slug 租户唯一标识符
    */
-  async createTenant(name: string, slug: string, operatorId?: number): Promise<Tenant> {
+  async createTenant(
+    name: string,
+    slug: string,
+    operatorId?: number,
+  ): Promise<Tenant> {
     // 检查名称和slug唯一性
-    const exist = await this.tenantRepository.findOne({ where: [{ name }, { slug }] });
+    const exist = await this.tenantRepository.findOne({
+      where: [{ name }, { slug }],
+    });
     if (exist) {
-      throw new BadRequestException(await this.i18n.t('common.tenant_exists'));
+      throw new BadRequestException(this.i18n.t('common.tenant_exists'));
     }
     const tenant = this.tenantRepository.create({ name, slug });
     const newTenant = await this.tenantRepository.save(tenant);
@@ -51,9 +61,15 @@ export class TenantService {
    * @param name 新名称
    * @param slug 新标识符
    */
-  async updateTenant(id: number, name: string, slug: string, operatorId?: number): Promise<Tenant> {
+  async updateTenant(
+    id: number,
+    name: string,
+    slug: string,
+    operatorId?: number,
+  ): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
-    if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+    if (!tenant)
+      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
     tenant.name = name;
     tenant.slug = slug;
     await this.auditLogService.audit({
@@ -73,7 +89,8 @@ export class TenantService {
    */
   async deleteTenant(id: number, operatorId?: number): Promise<void> {
     const result = await this.tenantRepository.delete(id);
-    if (result.affected === 0) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+    if (result.affected === 0)
+      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
     await this.auditLogService.audit({
       userId: operatorId,
       action: 'delete',
@@ -89,7 +106,8 @@ export class TenantService {
    */
   async findTenantById(id: number): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
-    if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+    if (!tenant)
+      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
     return tenant;
   }
 
@@ -105,9 +123,14 @@ export class TenantService {
    * @param id 租户ID
    * @param status 新状态
    */
-  async changeStatus(id: number, status: TenantStatus, operatorId?: number): Promise<Tenant> {
+  async changeStatus(
+    id: number,
+    status: TenantStatus,
+    operatorId?: number,
+  ): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
-    if (!tenant) throw new NotFoundException(await this.i18n.t('common.tenant_not_found'));
+    if (!tenant)
+      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
     tenant.status = status;
     await this.auditLogService.audit({
       userId: operatorId,

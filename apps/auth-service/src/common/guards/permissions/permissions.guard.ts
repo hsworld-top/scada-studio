@@ -34,7 +34,9 @@ export class PermissionsGuard implements CanActivate {
 
     // 验证 user 对象和租户信息是否存在
     if (!user || !user.userId || !user.tenantId) {
-      throw new UnauthorizedException(await this.i18n.t('common.user_or_tenant_missing'));
+      throw new UnauthorizedException(
+        this.i18n.t('common.user_or_tenant_missing'),
+      );
     }
 
     const { resource, action } = requiredPermissions;
@@ -50,7 +52,11 @@ export class PermissionsGuard implements CanActivate {
     );
 
     if (!hasPermission) {
-      throw new ForbiddenException(await this.i18n.t('common.permission_denied', { args: { userId, action, resource, tenantId } }));
+      throw new ForbiddenException(
+        this.i18n.t('common.permission_denied', {
+          args: { userId, action, resource, tenantId },
+        }),
+      );
     }
 
     return true;

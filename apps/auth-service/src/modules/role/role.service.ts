@@ -36,7 +36,9 @@ export class RoleService {
       tenantId,
     });
     if (existingRole) {
-      throw new ConflictException(await this.i18n.t('common.role_exists', { args: { name } }));
+      throw new ConflictException(
+        this.i18n.t('common.role_exists', { args: { name } }),
+      );
     }
 
     const role = this.roleRepository.create({ name, description, tenantId });
@@ -84,7 +86,7 @@ export class RoleService {
   async findOne(id: number, tenantId: number): Promise<Role> {
     const role = await this.roleRepository.findOneBy({ id, tenantId });
     if (!role) {
-      throw new NotFoundException(await this.i18n.t('common.role_not_found'));
+      throw new NotFoundException(this.i18n.t('common.role_not_found'));
     }
     return role;
   }
@@ -100,7 +102,9 @@ export class RoleService {
         tenantId,
       });
       if (existingRole) {
-        throw new ConflictException(await this.i18n.t('common.role_exists', { args: { name } }));
+        throw new ConflictException(
+          this.i18n.t('common.role_exists', { args: { name } }),
+        );
       }
       this.logger.warn(
         `Role name is being changed from '${role.name}' to '${name}'. This can have significant permission implications and may require manual policy updates if not handled carefully.`,
@@ -125,7 +129,11 @@ export class RoleService {
     return updatedRole;
   }
 
-  async remove(id: number, tenantId: number, operatorId?: number): Promise<{ success: boolean }> {
+  async remove(
+    id: number,
+    tenantId: number,
+    operatorId?: number,
+  ): Promise<{ success: boolean }> {
     const role = await this.findOne(id, tenantId);
 
     // It is a good practice to check if the role is still in use before deleting.

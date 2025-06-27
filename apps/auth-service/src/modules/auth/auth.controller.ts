@@ -19,7 +19,10 @@ import { I18nService } from 'nestjs-i18n';
  */
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private readonly i18n: I18nService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly i18n: I18nService,
+  ) {}
 
   /**
    * 生成图形验证码。
@@ -50,7 +53,9 @@ export class AuthController {
     if (!user) {
       // 记录登录失败
       await this.authService.recordLoginAttempt(loginDto, false);
-      throw new UnauthorizedException(await this.i18n.t('common.invalid_credentials'));
+      throw new UnauthorizedException(
+        this.i18n.t('common.invalid_credentials'),
+      );
     }
 
     // 3. 登录成功后处理
@@ -79,7 +84,10 @@ export class AuthController {
     @Payload(new ValidationPipe()) refreshTokenDto: RefreshTokenDto,
   ) {
     // 普通用户多端登录需带 sessionId
-    return this.authService.refreshToken(refreshTokenDto.refreshToken, refreshTokenDto.sessionId);
+    return this.authService.refreshToken(
+      refreshTokenDto.refreshToken,
+      refreshTokenDto.sessionId,
+    );
   }
 
   /**

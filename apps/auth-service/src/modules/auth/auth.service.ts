@@ -93,7 +93,7 @@ export class AuthService {
     const captchaEnabled = process.env.ENABLE_CAPTCHA === 'true';
     if (captchaEnabled) {
       if (!captchaId || !captchaText) {
-        throw new BadRequestException(await this.i18n.t('common.captcha_required'));
+        throw new BadRequestException(this.i18n.t('common.captcha_required'));
       }
       const captchaKey = `${this.CAPTCHA_KEY_PREFIX}:${captchaId}`;
       const storedCaptcha = await this.redisService.get(captchaKey);
@@ -102,7 +102,7 @@ export class AuthService {
       await this.redisService.del(captchaKey);
 
       if (!storedCaptcha || storedCaptcha !== captchaText.toLowerCase()) {
-        throw new BadRequestException(await this.i18n.t('common.invalid_captcha'));
+        throw new BadRequestException(this.i18n.t('common.invalid_captcha'));
       }
     }
   }
@@ -151,23 +151,27 @@ export class AuthService {
     const tenant = await this.tenantRepository.findOneBy({ slug: tenantSlug });
     if (!tenant) {
       this.logger.warn(`Login attempt for non-existent tenant: ${tenantSlug}`);
-      throw new UnauthorizedException(await this.i18n.t('common.tenant_not_found'));
+      throw new UnauthorizedException(this.i18n.t('common.tenant_not_found'));
     }
     if (tenant.status !== TenantStatus.ACTIVE) {
-      this.logger.warn(`Login attempt for inactive tenant: ${tenant.name} (${tenant.slug})`);
-      throw new UnauthorizedException(await this.i18n.t('common.tenant_inactive'));
+      this.logger.warn(
+        `Login attempt for inactive tenant: ${tenant.name} (${tenant.slug})`,
+      );
+      throw new UnauthorizedException(this.i18n.t('common.tenant_inactive'));
     }
 
     // 2. 在指定租户下查找用户
     const user = await this.userService.findOneByUsername(username, tenant.id);
     if (!user) {
-      throw new UnauthorizedException(await this.i18n.t('common.user_not_found'));
+      throw new UnauthorizedException(this.i18n.t('common.user_not_found'));
     }
 
     // 3. 检查用户状态
     if (user.status !== UserStatus.ACTIVE) {
-      this.logger.warn(`Login attempt for inactive user: ${username} in tenant ${tenant.name}`);
-      throw new UnauthorizedException(await this.i18n.t('common.user_inactive'));
+      this.logger.warn(
+        `Login attempt for inactive user: ${username} in tenant ${tenant.name}`,
+      );
+      throw new UnauthorizedException(this.i18n.t('common.user_inactive'));
     }
 
     // 4. 校验密码
@@ -197,7 +201,12 @@ export class AuthService {
     // 生成 token，普通用户 payload 带 sessionId
     const tokens = await this._generateTokens(user, sessionId);
     // 存储 refresh token，管理员单点登录覆盖写入，普通用户多端写入
-    await this._storeRefreshToken(user.id!, tokens.refreshToken, !!isAdmin, sessionId);
+    await this._storeRefreshToken(
+      user.id!,
+      tokens.refreshToken,
+      !!isAdmin,
+      sessionId,
+    );
     // 自动审计
     await this.auditLogService.audit({
       userId: user.id,
@@ -219,7 +228,12 @@ export class AuthService {
    * @param accessToken 需要作废的 access_token
    * @param sessionId 普通用户需带 sessionId
    */
-  async logout(accessToken: string, sessionId?: string, operatorId?: number, ip?: string): Promise<void> {
+  async logout(
+    accessToken: string,
+    sessionId?: string,
+    operatorId?: number,
+    ip?: string,
+  ): Promise<void> {
     try {
       const decoded = this.jwtService.decode(accessToken);
       if (!decoded || !decoded.exp) return;
@@ -239,10 +253,14 @@ export class AuthService {
       // 2. 删除 refresh token
       if (isAdmin) {
         // 管理员单点登录，删除唯一 refresh token
-        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+        await this.redisService.del(
+          `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
+        );
       } else if (sessionId) {
         // 普通用户多端登录，删除指定 sessionId 的 refresh token
-        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`);
+        await this.redisService.del(
+          `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`,
+        );
       }
       this.logger.log(
         `User ${userId} logged out and refresh token was revoked.`,
@@ -272,7 +290,12 @@ export class AuthService {
    * @param sessionId 普通用户需带 sessionId
    * @returns 新的 access_token、refresh_token、sessionId
    */
-  async refreshToken(token: string, sessionId?: string, operatorId?: number, ip?: string) {
+  async refreshToken(
+    token: string,
+    sessionId?: string,
+    operatorId?: number,
+    ip?: string,
+  ) {
     let payload;
     try {
       // 1. 验证 Refresh Token 的签名和时效
@@ -299,14 +322,18 @@ export class AuthService {
         `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`,
       );
     } else {
-      throw new ForbiddenException(await this.i18n.t('common.sessionid_required'));
+      throw new ForbiddenException(this.i18n.t('common.sessionid_required'));
     }
     if (!storedToken || storedToken !== token) {
       // 如果不一致，说明有安全风险（可能 token 已被盗用或已在别处登录），强制所有会话下线
       if (isAdmin) {
-        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`);
+        await this.redisService.del(
+          `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}`,
+        );
       } else if (sessionId) {
-        await this.redisService.del(`${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`);
+        await this.redisService.del(
+          `${this.REFRESH_TOKEN_KEY_PREFIX}:${userId}:${sessionId}`,
+        );
       }
       throw new ForbiddenException(
         'Refresh token has been invalidated. Please log in again.',
@@ -315,12 +342,17 @@ export class AuthService {
 
     const user = await this.userService.findOneById(userId, payload.tenantId);
     if (!user) {
-      throw new ForbiddenException(await this.i18n.t('common.user_not_found'));
+      throw new ForbiddenException(this.i18n.t('common.user_not_found'));
     }
 
     // 3. 签发新的 tokens 并更新 Redis
     const tokens = await this._generateTokens(user, sessionId);
-    await this._storeRefreshToken(user.id, tokens.refreshToken, isAdmin, sessionId);
+    await this._storeRefreshToken(
+      user.id,
+      tokens.refreshToken,
+      isAdmin,
+      sessionId,
+    );
     // 自动审计
     await this.auditLogService.audit({
       userId: operatorId || user.id,
@@ -349,7 +381,9 @@ export class AuthService {
       this.logger.error(
         'SSO configuration (SSO_SHARED_SECRET, SSO_ISSUER) is missing.',
       );
-      throw new InternalServerErrorException(await this.i18n.t('common.sso_not_configured'));
+      throw new InternalServerErrorException(
+        this.i18n.t('common.sso_not_configured'),
+      );
     }
 
     try {
@@ -361,7 +395,9 @@ export class AuthService {
 
       const { sub, email, name, tenantSlug } = payload;
       if (!sub || !email || !tenantSlug) {
-        throw new UnauthorizedException(await this.i18n.t('common.sso_token_invalid'));
+        throw new UnauthorizedException(
+          this.i18n.t('common.sso_token_invalid'),
+        );
       }
 
       // 3. 查找或创建用户
@@ -395,7 +431,7 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException(await this.i18n.t('common.sso_token_invalid'));
+      throw new UnauthorizedException(this.i18n.t('common.sso_token_invalid'));
     }
   }
 
@@ -423,7 +459,12 @@ export class AuthService {
         expiresIn: process.env.JWT_ACCESS_TOKEN_TTL,
       }),
       this.jwtService.signAsync(
-        { sub: user.id!.toString(), tenantId: user.tenantId, roles: user.roles?.map((role) => role.name), sessionId },
+        {
+          sub: user.id!.toString(),
+          tenantId: user.tenantId,
+          roles: user.roles?.map((role) => role.name),
+          sessionId,
+        },
         {
           // refresh token 只包含必要信息
           secret: process.env.JWT_REFRESH_SECRET,
@@ -446,7 +487,12 @@ export class AuthService {
    * @param sessionId 普通用户多端登录的 sessionId
    * @private
    */
-  private async _storeRefreshToken(userId: number, token: string, isAdmin: boolean, sessionId?: string) {
+  private async _storeRefreshToken(
+    userId: number,
+    token: string,
+    isAdmin: boolean,
+    sessionId?: string,
+  ) {
     const ttlInSeconds = this._parseTtl(
       process.env.JWT_REFRESH_TOKEN_TTL || '7d',
     );

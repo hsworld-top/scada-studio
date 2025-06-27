@@ -41,7 +41,9 @@ export class GroupService {
 
     const existingGroup = await this.groupRepository.findOneBy(query);
     if (existingGroup) {
-      throw new ConflictException(await this.i18n.t('common.group_exists', { args: { name } }));
+      throw new ConflictException(
+        this.i18n.t('common.group_exists', { args: { name } }),
+      );
     }
 
     let parentGroup: Group | null = null;
@@ -114,7 +116,7 @@ export class GroupService {
   async findOne(id: number, tenantId: number): Promise<Group> {
     const group = await this.groupRepository.findOneBy({ id, tenantId });
     if (!group) {
-      throw new NotFoundException(await this.i18n.t('common.group_not_found'));
+      throw new NotFoundException(this.i18n.t('common.group_not_found'));
     }
     return group;
   }
@@ -132,7 +134,9 @@ export class GroupService {
         group.parent = null;
       } else {
         if (parentId === id) {
-          throw new ConflictException(await this.i18n.t('common.group_cannot_be_own_parent'));
+          throw new ConflictException(
+            this.i18n.t('common.group_cannot_be_own_parent'),
+          );
         }
         const newParent = await this.findOne(parentId, tenantId);
         group.parent = newParent;
@@ -152,7 +156,11 @@ export class GroupService {
     return updatedGroup;
   }
 
-  async remove(id: number, tenantId: number, operatorId?: number): Promise<{ success: boolean }> {
+  async remove(
+    id: number,
+    tenantId: number,
+    operatorId?: number,
+  ): Promise<{ success: boolean }> {
     const group = await this.findOne(id, tenantId);
 
     const childrenCount =
