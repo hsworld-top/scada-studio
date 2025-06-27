@@ -3,9 +3,11 @@ import { PermissionService } from './permission.service';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
 import { SYSTEM_PERMISSIONS } from './permission.constants';
+import { AuditLogService } from '../audit/audit-log.service';
 
 describe('PermissionService', () => {
   let service: PermissionService;
+  let casbinService: any;
 
   // 模拟 Casbin Enforcer
   const mockEnforcer = {
@@ -29,10 +31,12 @@ describe('PermissionService', () => {
         PermissionService,
         { provide: CasbinService, useValue: mockCasbinService },
         { provide: AppLogger, useValue: mockLogger },
+        { provide: AuditLogService, useValue: { audit: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<PermissionService>(PermissionService);
+    casbinService = module.get<CasbinService>(CasbinService);
   });
 
   afterEach(() => {

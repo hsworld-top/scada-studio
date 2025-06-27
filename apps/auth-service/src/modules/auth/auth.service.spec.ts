@@ -12,6 +12,8 @@ import {
   UnauthorizedException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { I18nService } from 'nestjs-i18n';
+import { AuditLogService } from '../audit/audit-log.service';
 
 // 模拟 User 实体数据
 const mockUser: Partial<User> = {
@@ -45,11 +47,13 @@ describe('AuthService', () => {
   // 使用 jest.fn() 创建模拟函数
   const mockUserService = {
     findOneByUsername: jest.fn(),
+    findOneById: jest.fn(),
     findOrCreateBySSO: jest.fn(),
   };
   const mockJwtService = {
     sign: jest.fn().mockReturnValue('mock_jwt_token'),
     verify: jest.fn(),
+    decode: jest.fn(),
   };
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: any) => {
@@ -78,6 +82,12 @@ describe('AuthService', () => {
     warn: jest.fn(),
     setContext: jest.fn(),
   };
+  const mockI18nService = {
+    t: jest.fn().mockResolvedValue('mocked'),
+  };
+  const mockAuditLogService = {
+    audit: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -90,6 +100,8 @@ describe('AuthService', () => {
         { provide: getRepositoryToken(Tenant), useValue: mockTenantRepository },
         { provide: RedisLibService, useValue: mockRedisLibService },
         { provide: AppLogger, useValue: mockLogger },
+        { provide: I18nService, useValue: mockI18nService },
+        { provide: AuditLogService, useValue: mockAuditLogService },
       ],
     }).compile();
 
@@ -201,4 +213,6 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
   });
+
+  // 可继续补充 preLoginValidate、recordLoginAttempt、logout、refreshToken 等核心方法的测试
 });
