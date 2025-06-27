@@ -2,7 +2,6 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Enforcer, newEnforcer } from 'casbin';
 import { RedisLibService } from '@app/redis-lib';
 import { AppLogger } from '@app/logger-lib';
-import { ConfigService } from '@nestjs/config';
 import TypeORMAdapter from 'typeorm-adapter';
 import { TypeORMAdapterOptions } from 'typeorm-adapter';
 import * as path from 'path';
@@ -15,7 +14,6 @@ export class CasbinService implements OnModuleInit {
   constructor(
     private readonly redisService: RedisLibService,
     private readonly logger: AppLogger,
-    private readonly configService: ConfigService,
   ) {
     this.logger.setContext(this.context);
   }
@@ -23,11 +21,16 @@ export class CasbinService implements OnModuleInit {
   async onModuleInit() {
     const dbOptions: TypeORMAdapterOptions = {
       type: 'postgres',
-      host: this.configService.get<string>('DB_HOST', 'localhost'),
-      port: this.configService.get<number>('DB_PORT', 5432),
-      username: this.configService.get<string>('DB_USER', 'postgres'),
-      password: this.configService.get<string>('DB_PASSWORD', 'postgres'),
-      database: this.configService.get<string>('DB_NAME', 'elite'),
+      host: process.env.DBHOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      database: process.env.DB_NAME || 'elite',
+      extra: {
+        max: 5,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      },
     };
 
     // 在 monorepo 结构中，`process.cwd()` 通常指向项目根目录，是定位配置文件的可靠方式

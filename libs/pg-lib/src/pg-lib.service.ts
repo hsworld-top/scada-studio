@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
+import { AppLogger } from '@app/logger-lib';
+import { TypeOrmNestLogger } from './typeorm-logger';
 
 @Injectable()
 export class PgLibService implements TypeOrmOptionsFactory {
   constructor() {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
+    const isProd = process.env.NODE_ENV === 'production';
     return {
       type: 'postgres',
       host: process.env.DB_HOST || 'localhost',
@@ -14,10 +17,20 @@ export class PgLibService implements TypeOrmOptionsFactory {
       password: process.env.DB_PASSWORD || 'postgres',
       database: process.env.DB_NAME || 'postgres',
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production', // 更安全的 synchronize 开关
-      logger: 'simple-console',
-      logging: 'all',
-      poolSize: Number(process.env.DB_POOL_SIZE) || 10,
+      synchronize: !isProd, // 更安全的 synchronize 开关
+      logger: new TypeOrmNestLogger(
+        new AppLogger({
+          service: 'typeorm',
+          context: 'TypeORM',
+          env: process.env.NODE_ENV as any,
+        }),
+      ),
+      logging: isProd ? ['error', 'warn'] : 'all',
+      extra: {
+        max: Number(process.env.DB_POOL_SIZE) || 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      },
     };
   }
 }
