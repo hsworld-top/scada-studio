@@ -8,7 +8,7 @@ import * as path from 'path';
     I18nModule.forRoot({
       fallbackLanguage: 'zh',
       loaderOptions: {
-        path: path.resolve(__dirname, '../../i18n-lib/i18n'),
+        path: path.join(process.cwd(), 'libs/i18n-lib/i18n'),
         watch: true,
       },
       resolvers: [
@@ -19,4 +19,4 @@ import * as path from 'path';
   ],
   exports: [I18nModule],
 })
-export class I18nLibModule {} 
+export class I18nLibModule {}

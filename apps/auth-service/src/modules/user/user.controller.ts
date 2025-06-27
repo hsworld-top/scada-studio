@@ -1,14 +1,16 @@
 import { Controller, UseGuards, ValidationPipe } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
+import {
+  CreateUserDto,
+  FindUsersDto,
+  UpdateUserDto,
+  SetUserStatusDto,
+  UpdateProfileDto,
+  ChangePasswordDto,
+} from '@app/shared-dto-lib';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions/require-permissions.decorator';
-import { FindUsersDto } from './dto/find-users.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { SetUserStatusDto } from './dto/set-user-status.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
 import { CurrentUserId } from '../../common/decorators/current-user-id.decorator';
 
 /**
@@ -66,10 +68,20 @@ export class UserController {
   @MessagePattern('users.delete')
   @RequirePermissions({ resource: 'user', action: 'delete' })
   async remove(
-    @Payload() payload: { userId: number; tenantId: number; operatorId?: number; currentUserId?: number },
+    @Payload()
+    payload: {
+      userId: number;
+      tenantId: number;
+      operatorId?: number;
+      currentUserId?: number;
+    },
     @CurrentUserId() operatorId: number,
   ) {
-    return this.userService.remove(payload.userId, payload.tenantId, payload.operatorId || operatorId);
+    return this.userService.remove(
+      payload.userId,
+      payload.tenantId,
+      payload.operatorId || operatorId,
+    );
   }
 
   // --- Self-service Endpoints (for logged-in users) ---

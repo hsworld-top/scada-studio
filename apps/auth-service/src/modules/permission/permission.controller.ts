@@ -3,7 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions/require-permissions.decorator';
 import { PermissionService } from './permission.service';
-import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { UpdatePermissionsDto } from '@app/shared-dto-lib';
 
 @Controller('permissions')
 @UseGuards(PermissionsGuard)

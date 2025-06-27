@@ -6,9 +6,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Role } from '../user/entities/role.entity';
-import { CreateRoleDto } from './dto/create-role.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
-import { FindRolesDto } from './dto/find-roles.dto';
+import {
+  CreateRoleDto,
+  UpdateRoleDto,
+  FindRolesDto,
+} from '@app/shared-dto-lib';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
 import { I18nService } from 'nestjs-i18n';

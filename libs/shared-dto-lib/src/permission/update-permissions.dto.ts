@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsOptional, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  IsOptional,
+  IsInt,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class PermissionDto {

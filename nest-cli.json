@@ -1,14 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "apps/scada-studio/src",
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "apps/scada-studio/tsconfig.app.json"
+    "tsConfigPath": "tsconfig.json"
   },
   "monorepo": true,
-  "root": "apps/scada-studio",
   "projects": {
     "api-gateway": {
       "type": "application",
@@ -25,7 +23,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/auth-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/auth-service/tsconfig.app.json"
+        "tsConfigPath": "apps/auth-service/tsconfig.app.json",
+        "webpackConfigPath": "apps/auth-service/webpack.config.js"
       }
     },
     "logger-lib": {
@@ -71,6 +70,15 @@
       "sourceRoot": "libs/i18n-lib/src",
       "compilerOptions": {
         "tsConfigPath": "libs/i18n-lib/tsconfig.lib.json"
+      }
+    },
+    "shared-dto-lib": {
+      "type": "library",
+      "root": "libs/shared-dto-lib",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared-dto-lib/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared-dto-lib/tsconfig.lib.json"
       }
     }
   }

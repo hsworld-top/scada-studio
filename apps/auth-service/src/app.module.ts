@@ -16,14 +16,14 @@ import { I18nLibModule } from '@app/i18n-lib';
 import { AuditLogModule } from './modules/audit/audit-log.module';
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     I18nLibModule,
     LoggerLibModule.forRoot({
       service: 'auth-service',
       env: (process.env.NODE_ENV as any) || 'development',
       logDir: 'logs',
-      level: 'info',
+      level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
     }),
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
       imports: [PgLibModule],
       useExisting: PgLibService,

@@ -34,10 +34,7 @@ export class CasbinService implements OnModuleInit {
     };
 
     // 在 monorepo 结构中，`process.cwd()` 通常指向项目根目录，是定位配置文件的可靠方式
-    const modelPath = path.join(
-      process.cwd(),
-      '/apps/auth-service/src/casbin-model.conf',
-    );
+    const modelPath = path.join(process.cwd(), '/casbin-model.conf');
     const adapter = await TypeORMAdapter.newAdapter(dbOptions);
     this.enforcer = await newEnforcer(modelPath, adapter);
 

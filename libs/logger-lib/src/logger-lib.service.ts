@@ -28,7 +28,7 @@ export class AppLogger implements LoggerService {
       context = 'App',
       level = 'info',
       enableFile = true,
-      enableConsole = true,
+      enableConsole = process.env.NODE_ENV === 'production' ? false : true,
       logDir = 'logs',
       env = 'development',
       zippedArchive = true,

@@ -1,5 +1,5 @@
 import { IsInt, IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
-import { UserStatus } from '../entities/user.entity';
+import { UserStatus } from './user-status.enum';
 
 export class SetUserStatusDto {
   @IsInt()

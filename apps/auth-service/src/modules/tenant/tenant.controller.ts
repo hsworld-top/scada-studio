@@ -1,9 +1,15 @@
 import { Controller, ValidationPipe, UseGuards } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TenantService } from './tenant.service';
-import { TenantStatus } from './entities/tenant.entity';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions/require-permissions.decorator';
+import {
+  CreateTenantDto,
+  UpdateTenantDto,
+  DeleteTenantDto,
+  FindTenantByIdDto,
+  ChangeTenantStatusDto,
+} from '@app/shared-dto-lib';
 
 /**
  * TenantController 负责处理租户相关的微服务消息接口。
@@ -19,7 +25,7 @@ export class TenantController {
    */
   @MessagePattern('tenant.create')
   @RequirePermissions({ resource: 'tenant', action: 'create' })
-  create(@Payload(new ValidationPipe()) payload: { name: string; slug: string }) {
+  create(@Payload(new ValidationPipe()) payload: CreateTenantDto) {
     return this.tenantService.createTenant(payload.name, payload.slug);
   }
 
@@ -29,8 +35,12 @@ export class TenantController {
    */
   @MessagePattern('tenant.update')
   @RequirePermissions({ resource: 'tenant', action: 'update' })
-  update(@Payload(new ValidationPipe()) payload: { id: number; name: string; slug: string }) {
-    return this.tenantService.updateTenant(payload.id, payload.name, payload.slug);
+  update(@Payload(new ValidationPipe()) payload: UpdateTenantDto) {
+    return this.tenantService.updateTenant(
+      payload.id,
+      payload.name,
+      payload.slug,
+    );
   }
 
   /**
@@ -39,7 +49,7 @@ export class TenantController {
    */
   @MessagePattern('tenant.delete')
   @RequirePermissions({ resource: 'tenant', action: 'delete' })
-  async delete(@Payload(new ValidationPipe()) payload: { id: number }) {
+  async delete(@Payload(new ValidationPipe()) payload: DeleteTenantDto) {
     await this.tenantService.deleteTenant(payload.id);
     return { success: true };
   }
@@ -50,7 +60,7 @@ export class TenantController {
    */
   @MessagePattern('tenant.findById')
   @RequirePermissions({ resource: 'tenant', action: 'read' })
-  findById(@Payload(new ValidationPipe()) payload: { id: number }) {
+  findById(@Payload(new ValidationPipe()) payload: FindTenantByIdDto) {
     return this.tenantService.findTenantById(payload.id);
   }
 
@@ -69,7 +79,7 @@ export class TenantController {
    */
   @MessagePattern('tenant.changeStatus')
   @RequirePermissions({ resource: 'tenant', action: 'update' })
-  changeStatus(@Payload(new ValidationPipe()) payload: { id: number; status: TenantStatus }) {
+  changeStatus(@Payload(new ValidationPipe()) payload: ChangeTenantStatusDto) {
     return this.tenantService.changeStatus(payload.id, payload.status);
   }
-} 
+}

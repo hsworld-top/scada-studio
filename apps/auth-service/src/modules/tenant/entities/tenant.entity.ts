@@ -7,18 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
-
-/**
- * 租户状态枚举
- * - Active: 租户可用
- * - Inactive: 租户已停用，该租户下所有用户无法登录
- * - Suspended: 租户因违规等原因被暂停
- */
-export enum TenantStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-}
+import { TenantStatus } from '@app/shared-dto-lib';
 
 /**
  * Tenant 实体，表示一个独立的客户/组织。

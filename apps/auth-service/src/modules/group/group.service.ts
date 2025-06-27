@@ -6,9 +6,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, TreeRepository, IsNull } from 'typeorm';
 import { Group } from '../user/entities/group.entity';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { UpdateGroupDto } from './dto/update-group.dto';
-import { FindGroupsDto } from './dto/find-groups.dto';
+import {
+  CreateGroupDto,
+  UpdateGroupDto,
+  FindGroupsDto,
+} from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
 import { I18nService } from 'nestjs-i18n';
 import { AuditLogService } from '../audit/audit-log.service';

@@ -3,9 +3,11 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions/require-permissions.decorator';
 import { RoleService } from './role.service';
-import { CreateRoleDto } from './dto/create-role.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
-import { FindRolesDto } from './dto/find-roles.dto';
+import {
+  CreateRoleDto,
+  UpdateRoleDto,
+  FindRolesDto,
+} from '@app/shared-dto-lib';
 
 @Controller('roles')
 @UseGuards(PermissionsGuard)

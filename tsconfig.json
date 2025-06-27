@@ -24,7 +24,9 @@
       "@app/pg-lib/*": ["libs/pg-lib/src/*"],
       "@app/redis-lib": ["libs/redis-lib/src"],
       "@app/redis-lib/*": ["libs/redis-lib/src/*"],
-      "@app/i18n-lib": ["libs/i18n-lib/src"]
+      "@app/i18n-lib": ["libs/i18n-lib/src"],
+      "@app/shared-dto-lib": ["libs/shared-dto-lib/src"],
+      "@app/shared-dto-lib/*": ["libs/shared-dto-lib/src/*"]
     }
   }
 }

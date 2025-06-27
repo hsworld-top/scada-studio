@@ -17,11 +17,7 @@ import * as bcrypt from 'bcrypt';
 import { Role } from './role.entity';
 import { Group } from './group.entity';
 import { Tenant } from '../../tenant/entities/tenant.entity';
-
-export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-}
+import { UserStatus } from '@app/shared-dto-lib';
 
 @Entity()
 @Index('idx_user_tenant_username', ['tenantId', 'username'], {

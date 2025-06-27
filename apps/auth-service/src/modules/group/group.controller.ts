@@ -3,9 +3,11 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions/require-permissions.decorator';
 import { GroupService } from './group.service';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { UpdateGroupDto } from './dto/update-group.dto';
-import { FindGroupsDto } from './dto/find-groups.dto';
+import {
+  CreateGroupDto,
+  UpdateGroupDto,
+  FindGroupsDto,
+} from '@app/shared-dto-lib';
 
 @Controller('groups')
 @UseGuards(PermissionsGuard)

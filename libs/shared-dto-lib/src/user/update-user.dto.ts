@@ -8,7 +8,7 @@ import {
   IsEnum,
   IsNotEmpty,
 } from 'class-validator';
-import { UserStatus } from '../entities/user.entity';
+import { UserStatus } from './user-status.enum';
 
 export class UpdateUserDto {
   @IsInt()

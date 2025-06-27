@@ -8,7 +8,7 @@ import {
   IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserStatus } from '../entities/user.entity';
+import { UserStatus } from './user-status.enum';
 
 export class FindUsersDto {
   @IsOptional()

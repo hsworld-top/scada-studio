@@ -11,18 +11,21 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User, UserStatus } from './entities/user.entity';
+import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
-import { CreateUserDto } from './dto/create-user.dto';
+import {
+  CreateUserDto,
+  FindUsersDto,
+  UpdateUserDto,
+  SetUserStatusDto,
+  UpdateProfileDto,
+  ChangePasswordDto,
+  UserStatus,
+} from '@app/shared-dto-lib';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
 import { Tenant } from '../tenant/entities/tenant.entity';
 import { Group } from './entities/group.entity';
-import { FindUsersDto } from './dto/find-users.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { SetUserStatusDto } from './dto/set-user-status.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
 import { nanoid } from 'nanoid';
 import { I18nService } from 'nestjs-i18n';
 import { AuditLogService } from '../audit/audit-log.service';

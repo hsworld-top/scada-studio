@@ -5,7 +5,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Tenant, TenantStatus } from './entities/tenant.entity';
+import { Tenant } from './entities/tenant.entity';
+import { TenantStatus } from '@app/shared-dto-lib';
 import { TenantInitializerService } from './tenant-initializer.service';
 import { I18nService } from 'nestjs-i18n';
 import { AuditLogService } from '../audit/audit-log.service';

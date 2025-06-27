@@ -13,13 +13,17 @@ import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import * as svgCaptcha from 'svg-captcha';
 import { RedisLibService } from '@app/redis-lib';
-import { User, UserStatus } from '../user/entities/user.entity';
+import { User } from '../user/entities/user.entity';
+import {
+  UserStatus,
+  TenantStatus,
+  LoginDto,
+  SsoLoginDto,
+} from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Tenant, TenantStatus } from '../tenant/entities/tenant.entity';
+import { Tenant } from '../tenant/entities/tenant.entity';
 import { Repository } from 'typeorm';
-import { LoginDto } from './dto/login.dto';
-import { SsoLoginDto } from './dto/sso-login.dto';
 import { I18nService } from 'nestjs-i18n';
 import { AuditLogService } from '../audit/audit-log.service';
 
@@ -371,7 +375,7 @@ export class AuthService {
    * @returns 登录成功后我们系统自己的 token
    */
   async ssoLogin(ssoLoginDto: SsoLoginDto, ip?: string) {
-    const { token } = ssoLoginDto;
+    const { ssoToken } = ssoLoginDto;
 
     // 1. 获取 SSO 配置
     const ssoSecret = process.env.SSO_SHARED_SECRET;
@@ -388,7 +392,7 @@ export class AuthService {
 
     try {
       // 2. 验证 SSO Token
-      const payload = await this.jwtService.verify(token, {
+      const payload = await this.jwtService.verify(ssoToken, {
         secret: ssoSecret,
         issuer: ssoIssuer,
       });

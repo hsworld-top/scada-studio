@@ -11,6 +11,10 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
+    files: ['**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
     languageOptions: {
       globals: {
         ...globals.node,

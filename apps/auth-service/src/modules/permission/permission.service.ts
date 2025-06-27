@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
 import { SYSTEM_PERMISSIONS } from './permission.constants';
-import { UpdatePermissionsDto } from './dto/update-permissions.dto';
+import { UpdatePermissionsDto } from '@app/shared-dto-lib';
 import { AuditLogService } from '../audit/audit-log.service';
 
 @Injectable()

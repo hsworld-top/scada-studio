@@ -8,10 +8,8 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto, SsoLoginDto, RefreshTokenDto } from '@app/shared-dto-lib';
 import { AuthGuard } from '@nestjs/passport';
-import { SsoLoginDto } from './dto/sso-login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { I18nService } from 'nestjs-i18n';
 
 /**
