@@ -93,6 +93,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'boolean', default: false })
+  allowMultiSession: boolean;
+
   @BeforeInsert()
   async hashPasswordOnInsert() {
     if (this.password) {

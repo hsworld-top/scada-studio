@@ -4,6 +4,7 @@ import { User } from '../../modules/user/entities/user.entity';
 import { Role } from '../../modules/user/entities/role.entity';
 import { Group } from '../../modules/user/entities/group.entity';
 import { Tenant } from '../../modules/tenant/entities/tenant.entity';
+import { SecuritySettings } from '../../modules/user/entities/security-settings.entity';
 
 /**
  * 共享数据库模块
@@ -18,7 +19,7 @@ import { Tenant } from '../../modules/tenant/entities/tenant.entity';
 @Module({
   imports: [
     // 在这里一次性注册所有需要在应用中共享的实体
-    TypeOrmModule.forFeature([User, Role, Group, Tenant]),
+    TypeOrmModule.forFeature([User, Role, Group, Tenant, SecuritySettings]),
   ],
   exports: [
     // 导出 TypeOrmModule，以便注入 Repository 的模块可以访问它

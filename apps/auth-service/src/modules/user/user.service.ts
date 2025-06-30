@@ -21,6 +21,8 @@ import {
   UpdateProfileDto,
   ChangePasswordDto,
   UserStatus,
+  SecurityPolicyDto,
+  UsernameBlacklistDto,
 } from '@app/shared-dto-lib';
 import { CasbinService } from '../casbin/casbin.service';
 import { AppLogger } from '@app/logger-lib';
@@ -29,6 +31,7 @@ import { Group } from './entities/group.entity';
 import { nanoid } from 'nanoid';
 import { I18nService } from 'nestjs-i18n';
 import { AuditLogService } from '../audit/audit-log.service';
+import { SecuritySettings } from './entities/security-settings.entity';
 
 interface SsoPayload {
   provider: string;
@@ -141,6 +144,12 @@ export class UserService implements OnModuleInit {
     // 密码强度校验
     if (!this.isStrongPassword(password)) {
       throw new BadRequestException(this.i18n.t('common.password_too_weak'));
+    }
+
+    // 用户名黑名单校验
+    const policy = await this.getSecurityPolicy(tenantId);
+    if ((policy.usernameBlacklist || []).includes(username)) {
+      throw new BadRequestException('该用户名禁止注册');
     }
 
     const user = this.userRepository.create({
@@ -611,5 +620,93 @@ export class UserService implements OnModuleInit {
       });
       this.logger.log('Super admin seeded.');
     }
+    // 初始化安全策略
+    await this.getSecurityPolicy(tenantId);
+  }
+
+  async setMultiSession(
+    userId: number,
+    allow: boolean,
+    operatorId: number,
+  ): Promise<{ success: boolean }> {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('用户不存在');
+    // 权限校验：只有本人或管理员可操作
+    if (user.id !== operatorId) {
+      // 检查操作者是否为管理员
+      const operator = await this.userRepository.findOneBy({ id: operatorId });
+      if (!operator) throw new UnauthorizedException('无权限');
+      const isAdmin = operator.roles?.some((role) => role.name === 'admin');
+      if (!isAdmin) throw new UnauthorizedException('无权限');
+    }
+    user.allowMultiSession = allow;
+    await this.userRepository.save(user);
+    return { success: true };
+  }
+
+  async getSecurityPolicy(tenantId: number): Promise<SecuritySettings> {
+    let policy = await this.userRepository.manager.findOne(SecuritySettings, {
+      where: { tenantId },
+    });
+    if (!policy) {
+      policy = this.userRepository.manager.create(SecuritySettings, {
+        tenantId,
+        maxLoginAttempts: 5,
+        lockDurationSeconds: 900,
+        usernameBlacklist: ['admin', 'root'],
+      });
+      await this.userRepository.manager.save(policy);
+    }
+    return policy;
+  }
+
+  async updateSecurityPolicy(
+    tenantId: number,
+    dto: SecurityPolicyDto,
+  ): Promise<SecuritySettings> {
+    let policy = await this.userRepository.manager.findOne(SecuritySettings, {
+      where: { tenantId },
+    });
+    if (!policy) {
+      policy = this.userRepository.manager.create(SecuritySettings, {
+        ...dto,
+        tenantId,
+      });
+    } else {
+      policy.maxLoginAttempts = dto.maxLoginAttempts;
+      policy.lockDurationSeconds = dto.lockDurationSeconds;
+    }
+    await this.userRepository.manager.save(policy);
+    return policy;
+  }
+
+  async listUsernameBlacklist(tenantId: number): Promise<string[]> {
+    const policy = await this.getSecurityPolicy(tenantId);
+    return policy.usernameBlacklist || [];
+  }
+
+  async addUsernameBlacklist(
+    tenantId: number,
+    dto: UsernameBlacklistDto,
+  ): Promise<{ success: boolean }> {
+    const policy = await this.getSecurityPolicy(tenantId);
+    if (!policy.usernameBlacklist) policy.usernameBlacklist = [];
+    if (policy.usernameBlacklist.includes(dto.username))
+      throw new ConflictException('用户名已在黑名单');
+    policy.usernameBlacklist.push(dto.username);
+    await this.userRepository.manager.save(policy);
+    return { success: true };
+  }
+
+  async removeUsernameBlacklist(
+    tenantId: number,
+    dto: UsernameBlacklistDto,
+  ): Promise<{ success: boolean }> {
+    const policy = await this.getSecurityPolicy(tenantId);
+    policy.usernameBlacklist = (policy.usernameBlacklist || []).filter(
+      (u) => u !== dto.username,
+    );
+    await this.userRepository.manager.save(policy);
+    return { success: true };
   }
 }

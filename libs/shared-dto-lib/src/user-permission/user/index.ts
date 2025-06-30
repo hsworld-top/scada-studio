@@ -5,3 +5,6 @@ export * from './user-status.enum';
 export * from './update-profile.dto';
 export * from './create-user.dto';
 export * from './change-password.dto';
+export * from './set-multi-session.dto';
+export * from './security-policy.dto';
+export * from './username-blacklist.dto';

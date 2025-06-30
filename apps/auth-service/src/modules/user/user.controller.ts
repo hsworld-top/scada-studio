@@ -7,6 +7,8 @@ import {
   SetUserStatusDto,
   UpdateProfileDto,
   ChangePasswordDto,
+  SecurityPolicyDto,
+  UsernameBlacklistDto,
 } from '@app/shared-dto-lib';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
@@ -109,5 +111,62 @@ export class UserController {
   ) {
     changePasswordDto.operatorId = changePasswordDto.operatorId || operatorId;
     return this.userService.changePassword(changePasswordDto);
+  }
+
+  @MessagePattern('users.setMultiSession')
+  async setMultiSession(
+    @Payload(new ValidationPipe())
+    payload: { userId: number; allowMultiSession: boolean },
+    @CurrentUserId() operatorId: number,
+  ) {
+    return this.userService.setMultiSession(
+      payload.userId,
+      payload.allowMultiSession,
+      operatorId,
+    );
+  }
+
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions({ resource: 'user', action: 'manage_security_policy' })
+  @MessagePattern('settings.getSecurityPolicy')
+  async getSecurityPolicy(@Payload() payload: { tenantId: number }) {
+    return this.userService.getSecurityPolicy(payload.tenantId);
+  }
+
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions({ resource: 'user', action: 'manage_security_policy' })
+  @MessagePattern('settings.updateSecurityPolicy')
+  async updateSecurityPolicy(
+    @Payload() payload: { tenantId: number; dto: SecurityPolicyDto },
+  ) {
+    return this.userService.updateSecurityPolicy(payload.tenantId, payload.dto);
+  }
+
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions({ resource: 'user', action: 'manage_username_blacklist' })
+  @MessagePattern('settings.listUsernameBlacklist')
+  async listUsernameBlacklist(@Payload() payload: { tenantId: number }) {
+    return this.userService.listUsernameBlacklist(payload.tenantId);
+  }
+
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions({ resource: 'user', action: 'manage_username_blacklist' })
+  @MessagePattern('settings.addUsernameBlacklist')
+  async addUsernameBlacklist(
+    @Payload() payload: { tenantId: number; dto: UsernameBlacklistDto },
+  ) {
+    return this.userService.addUsernameBlacklist(payload.tenantId, payload.dto);
+  }
+
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions({ resource: 'user', action: 'manage_username_blacklist' })
+  @MessagePattern('settings.removeUsernameBlacklist')
+  async removeUsernameBlacklist(
+    @Payload() payload: { tenantId: number; dto: UsernameBlacklistDto },
+  ) {
+    return this.userService.removeUsernameBlacklist(
+      payload.tenantId,
+      payload.dto,
+    );
   }
 }

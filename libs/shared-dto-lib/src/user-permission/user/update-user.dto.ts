@@ -48,4 +48,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsInt()
   operatorId?: number;
+
+  @IsOptional()
+  allowMultiSession?: boolean;
 }
