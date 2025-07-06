@@ -104,4 +104,36 @@ export class AuthController {
     }
     return { success: true, message: 'Logout successful' };
   }
+
+  /**
+   * 验证访问token的有效性（供网关调用）
+   * @param payload { token: string }
+   * @returns { valid: boolean, user?: any, error?: string }
+   */
+  @MessagePattern('auth.validateToken')
+  async validateToken(@Payload() payload: { token: string }) {
+    try {
+      const { token } = payload;
+
+      if (!token) {
+        return { valid: false, error: 'Token不能为空' };
+      }
+
+      // 检查token是否在黑名单中
+      const isBlacklisted = await this.authService.isTokenBlacklisted(token);
+      if (isBlacklisted) {
+        return { valid: false, error: 'Token已失效' };
+      }
+
+      // 验证token并获取用户信息
+      const user = await this.authService.validateAccessToken(token);
+      if (!user) {
+        return { valid: false, error: '无效的Token' };
+      }
+
+      return { valid: true, user };
+    } catch (error) {
+      return { valid: false, error: error.message || 'Token验证失败' };
+    }
+  }
 }

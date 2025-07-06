@@ -537,4 +537,79 @@ export class AuthService {
         return Number(ttl);
     }
   }
+
+  /**
+   * 检查token是否在黑名单中
+   * @param token access token
+   * @returns boolean
+   */
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    const exists = await this.redisService.get(`blacklist:${token}`);
+    return !!exists;
+  }
+
+  /**
+   * 验证访问token并返回用户信息
+   * @param token access token
+   * @returns 用户信息或null
+   */
+  async validateAccessToken(token: string): Promise<any | null> {
+    try {
+      const payload = await this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET,
+      });
+
+      if (!payload || !payload.sub) {
+        return null;
+      }
+
+      // 获取用户详细信息
+      const user = await this.userService.findOneById(
+        payload.sub,
+        payload.tenantId,
+      );
+      if (!user) {
+        return null;
+      }
+
+      // 检查用户状态
+      if (user.status !== UserStatus.ACTIVE) {
+        return null;
+      }
+
+      // 检查租户状态
+      if (user.tenant && user.tenant.status !== TenantStatus.ACTIVE) {
+        return null;
+      }
+
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        tenantId: user.tenantId,
+        tenantSlug: user.tenant?.slug,
+        roles: user.roles?.map((role) => role.name) || [],
+        permissions: await this._getUserPermissions(user.id, user.tenantId),
+      };
+    } catch (error) {
+      this.logger.error('Token validation error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取用户权限列表
+   * @param userId 用户ID
+   * @param tenantId 租户ID
+   * @returns 权限列表
+   * @private
+   */
+  private async _getUserPermissions(
+    userId: number,
+    tenantId: number,
+  ): Promise<string[]> {
+    // 这里应该调用 Casbin 或权限服务来获取用户权限
+    // 暂时返回空数组，具体实现需要根据您的权限模型
+    return [];
+  }
 }

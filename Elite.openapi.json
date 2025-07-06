@@ -1,0 +1,2173 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Elite",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "开发系统"
+    },
+    {
+      "name": "开发系统/工程管理"
+    },
+    {
+      "name": "开发系统/用户管理"
+    },
+    {
+      "name": "开发系统/用户管理/认证 (Auth)"
+    },
+    {
+      "name": "开发系统/用户管理/用户管理 (User Management)"
+    },
+    {
+      "name": "开发系统/用户管理/个人资料 (Profile)"
+    },
+    {
+      "name": "开发系统/用户管理/角色管理 (Role Management)"
+    },
+    {
+      "name": "开发系统/用户管理/部门"
+    },
+    {
+      "name": "开发系统/用户管理/部门/用户组管理 (Group Management)"
+    },
+    {
+      "name": "开发系统/用户管理/权限管理 (Permission Management)"
+    },
+    {
+      "name": "认证 (Auth)"
+    },
+    {
+      "name": "用户管理 (User Management)"
+    },
+    {
+      "name": "个人资料 (Profile)"
+    },
+    {
+      "name": "角色管理 (Role Management)"
+    },
+    {
+      "name": "部门/用户组管理 (Group Management)"
+    },
+    {
+      "name": "权限管理 (Permission Management)"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "创建工程",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/工程管理"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": []
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/工程管理",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-306396048-run"
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "用户密码登录",
+        "deprecated": false,
+        "description": "通过租户标识、用户名和密码进行登录。如果系统配置了验证码，则需要一并提交。",
+        "tags": [
+          "开发系统/用户管理/认证 (Auth)",
+          "认证 (Auth)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginSuccessResponse"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "401": {
+            "description": "凭证无效或租户错误",
+            "headers": {},
+            "x-apifox-name": "没有权限"
+          },
+          "429": {
+            "description": "登录尝试次数过多",
+            "headers": {},
+            "x-apifox-name": "429"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/认证 (Auth)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133423-run"
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "用户登出",
+        "deprecated": false,
+        "description": "将当前使用的 `access_token` 加入黑名单，使其失效。",
+        "tags": [
+          "开发系统/用户管理/认证 (Auth)",
+          "认证 (Auth)"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "登出成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "401": {
+            "description": "未授权",
+            "headers": {},
+            "x-apifox-name": "没有权限"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/认证 (Auth)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133424-run"
+      }
+    },
+    "/auth/captcha": {
+      "get": {
+        "summary": "获取图形验证码",
+        "deprecated": false,
+        "description": "获取用于登录验证的图形验证码。返回的 `svg` 字段是 SVG 图像的 XML 字符串，可以直接在前端展示。",
+        "tags": [
+          "开发系统/用户管理/认证 (Auth)",
+          "认证 (Auth)"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptchaResponse"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/认证 (Auth)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133425-run"
+      }
+    },
+    "/auth/sso/login": {
+      "post": {
+        "summary": "单点登录 (SSO)",
+        "deprecated": false,
+        "description": "接收由可信第三方身份提供方 (IdP) 签发的 SSO Token，验证后完成登录并返回本系统的 Token。",
+        "tags": [
+          "开发系统/用户管理/认证 (Auth)",
+          "认证 (Auth)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SsoLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSO 登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginSuccessResponse"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "401": {
+            "description": "SSO Token 无效",
+            "headers": {},
+            "x-apifox-name": "没有权限"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/认证 (Auth)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133426-run"
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "summary": "刷新令牌 (Refresh Token)",
+        "deprecated": false,
+        "description": "使用一个有效的 `refresh_token` 来获取一个新的 `access_token`。",
+        "tags": [
+          "开发系统/用户管理/认证 (Auth)",
+          "认证 (Auth)"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "刷新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginSuccessResponse"
+                }
+              }
+            },
+            "x-apifox-name": "成功"
+          },
+          "401": {
+            "description": "Refresh Token 无效或已过期",
+            "x-apifox-name": "没有权限"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/认证 (Auth)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "获取用户列表",
+        "deprecated": false,
+        "description": "分页、搜索、筛选获取租户下的用户列表。需要 `user:read` 权限。",
+        "tags": [
+          "开发系统/用户管理/用户管理 (User Management)",
+          "用户管理 (User Management)"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "searchKeyword",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive"
+              ]
+            }
+          },
+          {
+            "name": "roleNames[]",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "groupIds[]",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "401": {
+            "description": "未授权",
+            "headers": {},
+            "x-apifox-name": "没有权限"
+          },
+          "403": {
+            "description": "无权限",
+            "headers": {},
+            "x-apifox-name": "禁止访问"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/用户管理 (User Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133427-run"
+      },
+      "post": {
+        "summary": "创建新用户",
+        "deprecated": false,
+        "description": "在当前租户下创建一个新用户。需要 `user:create` 权限。",
+        "tags": [
+          "开发系统/用户管理/用户管理 (User Management)",
+          "用户管理 (User Management)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          },
+          "400": {
+            "description": "参数错误",
+            "headers": {},
+            "x-apifox-name": "请求有误"
+          },
+          "409": {
+            "description": "用户名/邮箱/手机号已存在",
+            "headers": {},
+            "x-apifox-name": "409"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/用户管理 (User Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133428-run"
+      }
+    },
+    "/users/{userId}": {
+      "put": {
+        "summary": "更新用户信息",
+        "deprecated": false,
+        "description": "更新指定用户的信息，如角色、部门、状态等。需要 `user:update` 权限。",
+        "tags": [
+          "开发系统/用户管理/用户管理 (User Management)",
+          "用户管理 (User Management)"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/用户管理 (User Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133429-run"
+      },
+      "delete": {
+        "summary": "删除用户",
+        "deprecated": false,
+        "description": "软删除指定的用户。需要 `user:delete` 权限。",
+        "tags": [
+          "开发系统/用户管理/用户管理 (User Management)",
+          "用户管理 (User Management)"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/用户管理 (User Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133430-run"
+      }
+    },
+    "/users/{userId}/status": {
+      "put": {
+        "summary": "启用/禁用用户",
+        "deprecated": false,
+        "description": "设置用户的状态为 active 或 inactive。需要 `user:manage_status` 权限。",
+        "tags": [
+          "开发系统/用户管理/用户管理 (User Management)",
+          "用户管理 (User Management)"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ]
+                  }
+                },
+                "x-apifox-orders": [
+                  "status"
+                ],
+                "x-apifox-ignore-properties": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "状态设置成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/用户管理 (User Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133431-run"
+      }
+    },
+    "/profile/me": {
+      "get": {
+        "summary": "获取当前用户信息",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/个人资料 (Profile)",
+          "个人资料 (Profile)"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/个人资料 (Profile)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133432-run"
+      },
+      "put": {
+        "summary": "更新当前用户信息",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/个人资料 (Profile)",
+          "个人资料 (Profile)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/个人资料 (Profile)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133433-run"
+      }
+    },
+    "/profile/me/password": {
+      "put": {
+        "summary": "修改当前用户密码",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/个人资料 (Profile)",
+          "个人资料 (Profile)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码修改成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/个人资料 (Profile)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133434-run"
+      }
+    },
+    "/profile/me/multi-session": {
+      "put": {
+        "summary": "设置多端登录",
+        "deprecated": false,
+        "description": "设置当前用户是否允许在多个设备或浏览器上同时登录。",
+        "tags": [
+          "开发系统/用户管理/个人资料 (Profile)",
+          "个人资料 (Profile)"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "allowMultiSession": {
+                    "type": "boolean",
+                    "description": "true 为允许, false 为不允许"
+                  }
+                },
+                "required": [
+                  "allowMultiSession"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/个人资料 (Profile)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/roles": {
+      "get": {
+        "summary": "获取角色列表",
+        "deprecated": false,
+        "description": "分页获取当前租户下的角色列表。需要 `role:read` 权限。",
+        "tags": [
+          "开发系统/用户管理/角色管理 (Role Management)",
+          "角色管理 (Role Management)"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "searchKeyword",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/角色管理 (Role Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133447-run"
+      },
+      "post": {
+        "summary": "创建新角色",
+        "deprecated": false,
+        "description": "在当前租户下创建新角色。需要 `role:create` 权限。",
+        "tags": [
+          "开发系统/用户管理/角色管理 (Role Management)",
+          "角色管理 (Role Management)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/角色管理 (Role Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133436-run"
+      }
+    },
+    "/roles/{roleId}": {
+      "get": {
+        "summary": "获取角色详情",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/角色管理 (Role Management)",
+          "角色管理 (Role Management)"
+        ],
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/角色管理 (Role Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133437-run"
+      },
+      "put": {
+        "summary": "更新角色信息",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/角色管理 (Role Management)",
+          "角色管理 (Role Management)"
+        ],
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/角色管理 (Role Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133438-run"
+      },
+      "delete": {
+        "summary": "删除角色",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/角色管理 (Role Management)",
+          "角色管理 (Role Management)"
+        ],
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/角色管理 (Role Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133439-run"
+      }
+    },
+    "/groups": {
+      "get": {
+        "summary": "获取部门列表(平级)",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/部门/用户组管理 (Group Management)",
+          "部门/用户组管理 (Group Management)"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/部门/用户组管理 (Group Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133440-run"
+      },
+      "post": {
+        "summary": "创建新部门",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/部门/用户组管理 (Group Management)",
+          "部门/用户组管理 (Group Management)"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/部门/用户组管理 (Group Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133441-run"
+      }
+    },
+    "/groups/tree": {
+      "get": {
+        "summary": "获取部门树",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/部门/用户组管理 (Group Management)",
+          "部门/用户组管理 (Group Management)"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/部门/用户组管理 (Group Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133442-run"
+      }
+    },
+    "/groups/{groupId}": {
+      "get": {
+        "summary": "获取部门详情",
+        "deprecated": false,
+        "description": "获取单个部门或用户组的详细信息。需要 `group:read` 权限。",
+        "tags": [
+          "开发系统/用户管理/部门/用户组管理 (Group Management)",
+          "部门/用户组管理 (Group Management)"
+        ],
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Group"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/部门/用户组管理 (Group Management)",
+        "x-apifox-status": "design"
+      },
+      "put": {
+        "summary": "更新部门信息",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/部门/用户组管理 (Group Management)",
+          "部门/用户组管理 (Group Management)"
+        ],
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/部门/用户组管理 (Group Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133447-run"
+      },
+      "delete": {
+        "summary": "删除部门",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/部门/用户组管理 (Group Management)",
+          "部门/用户组管理 (Group Management)"
+        ],
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/部门/用户组管理 (Group Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133444-run"
+      }
+    },
+    "/permissions/system": {
+      "get": {
+        "summary": "获取所有系统权限点",
+        "deprecated": false,
+        "description": "获取系统中定义的所有可用权限资源和操作，用于前端渲染权限配置界面。需要 `permission:manage` 权限。",
+        "tags": [
+          "开发系统/用户管理/权限管理 (Permission Management)",
+          "权限管理 (Permission Management)"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/权限管理 (Permission Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133445-run"
+      }
+    },
+    "/permissions/roles/{roleName}": {
+      "get": {
+        "summary": "获取角色的权限",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/权限管理 (Permission Management)",
+          "权限管理 (Permission Management)"
+        ],
+        "parameters": [
+          {
+            "name": "roleName",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/权限管理 (Permission Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133446-run"
+      },
+      "put": {
+        "summary": "更新角色的权限",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理/权限管理 (Permission Management)",
+          "权限管理 (Permission Management)"
+        ],
+        "parameters": [
+          {
+            "name": "roleName",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePermissionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/权限管理 (Permission Management)",
+        "x-apifox-status": "released",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-311133447-run"
+      }
+    },
+    "/login": {
+      "get": {
+        "summary": "createsysuser",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "开发系统/用户管理"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "x-apifox-ignore-properties": [],
+                  "x-apifox-orders": []
+                }
+              }
+            },
+            "headers": {},
+            "x-apifox-name": "成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理",
+        "x-apifox-status": "developing",
+        "x-run-in-apifox": "https://app.apifox.com/web/project/6545661/apis/api-309035899-run"
+      }
+    },
+    "/settings/security-policy": {
+      "get": {
+        "summary": "获取安全策略",
+        "description": "获取当前租户的安全策略配置。需要 'user:manage_security_policy' 权限。",
+        "tags": [
+          "开发系统/用户管理/安全设置 (Security Settings)"
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/安全设置 (Security Settings)",
+        "x-apifox-status": "design"
+      },
+      "put": {
+        "summary": "更新安全策略",
+        "description": "更新当前租户的安全策略配置。需要 'user:manage_security_policy' 权限。",
+        "tags": [
+          "开发系统/用户管理/安全设置 (Security Settings)"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecurityPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/安全设置 (Security Settings)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/settings/username-blacklist": {
+      "get": {
+        "summary": "获取用户名黑名单",
+        "description": "获取当前租户的用户名黑名单列表。需要 'user:manage_username_blacklist' 权限。",
+        "tags": [
+          "开发系统/用户管理/安全设置 (Security Settings)"
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsernameBlacklistDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/安全设置 (Security Settings)",
+        "x-apifox-status": "design"
+      },
+      "post": {
+        "summary": "添加用户名到黑名单",
+        "description": "将一个或多个用户名添加到黑名单。需要 'user:manage_username_blacklist' 权限。",
+        "tags": [
+          "开发系统/用户管理/安全设置 (Security Settings)"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsernameBlacklistDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "添加成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/安全设置 (Security Settings)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/settings/username-blacklist/delete": {
+      "post": {
+        "summary": "从黑名单移除用户名",
+        "description": "从黑名单中移除一个或多个用户名。需要 'user:manage_username_blacklist' 权限。",
+        "tags": [
+          "开发系统/用户管理/安全设置 (Security Settings)"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsernameBlacklistDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移除成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/用户管理/安全设置 (Security Settings)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/tenants": {
+      "get": {
+        "summary": "获取租户列表",
+        "description": "获取系统中的所有租户。需要 `tenant:read` 权限。",
+        "tags": [
+          "开发系统/租户管理 (Tenant Management)"
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tenant"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/租户管理 (Tenant Management)",
+        "x-apifox-status": "design"
+      },
+      "post": {
+        "summary": "创建新租户",
+        "description": "创建一个新的租户。需要 `tenant:create` 权限。",
+        "tags": [
+          "开发系统/租户管理 (Tenant Management)"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tenant"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/租户管理 (Tenant Management)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/tenants/{tenantId}": {
+      "get": {
+        "summary": "获取租户详情",
+        "description": "获取单个租户的详细信息。需要 `tenant:read` 权限。",
+        "tags": [
+          "开发系统/租户管理 (Tenant Management)"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tenant"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/租户管理 (Tenant Management)",
+        "x-apifox-status": "design"
+      },
+      "put": {
+        "summary": "更新租户信息",
+        "description": "更新租户的名称或 slug。需要 `tenant:update` 权限。",
+        "tags": [
+          "开发系统/租户管理 (Tenant Management)"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tenant"
+                }
+              }
+            }
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/租户管理 (Tenant Management)",
+        "x-apifox-status": "design"
+      },
+      "delete": {
+        "summary": "删除租户",
+        "description": "删除一个租户。需要 `tenant:delete` 权限。",
+        "tags": [
+          "开发系统/租户管理 (Tenant Management)"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/租户管理 (Tenant Management)",
+        "x-apifox-status": "design"
+      }
+    },
+    "/tenants/{tenantId}/status": {
+      "put": {
+        "summary": "修改租户状态",
+        "description": "修改租户的激活状态。需要 `tenant:update` 权限。",
+        "tags": [
+          "开发系统/租户管理 (Tenant Management)"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeTenantStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "状态修改成功"
+          }
+        },
+        "security": [],
+        "x-apifox-folder": "开发系统/租户管理 (Tenant Management)",
+        "x-apifox-status": "design"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "tenantSlug": {
+            "type": "string",
+            "example": "default"
+          },
+          "username": {
+            "type": "string",
+            "example": "admin"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "admin_password"
+          },
+          "captchaId": {
+            "type": "string",
+            "example": "uuid-for-captcha"
+          },
+          "captchaText": {
+            "type": "string",
+            "example": "abcd"
+          }
+        },
+        "required": [
+          "tenantSlug",
+          "username",
+          "password"
+        ],
+        "x-apifox-orders": [
+          "tenantSlug",
+          "username",
+          "password",
+          "captchaId",
+          "captchaText"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "SsoLoginDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "第三方签发的 SSO JWT"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "x-apifox-orders": [
+          "token"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "LoginSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "access_token": {
+                "type": "string"
+              }
+            },
+            "x-apifox-orders": [
+              "access_token"
+            ],
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "data"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "CaptchaResponse": {
+        "type": "object",
+        "properties": {
+          "captchaId": {
+            "type": "string"
+          },
+          "svg": {
+            "type": "string",
+            "description": "SVG图像的XML字符串"
+          }
+        },
+        "x-apifox-orders": [
+          "captchaId",
+          "svg"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "preferences": {
+            "type": "object",
+            "x-apifox-orders": [],
+            "properties": {},
+            "x-apifox-ignore-properties": []
+          },
+          "tenantId": {
+            "type": "integer"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "username",
+          "email",
+          "phone",
+          "status",
+          "preferences",
+          "tenantId",
+          "roles",
+          "groups",
+          "createdAt",
+          "updatedAt"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "x-apifox-orders": [
+          "data",
+          "total"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "name",
+          "description"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "Group": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "integer",
+            "nullable": true
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "name",
+          "description",
+          "parentId",
+          "children"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "roleNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "groupIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "roleNames"
+        ],
+        "x-apifox-orders": [
+          "username",
+          "password",
+          "email",
+          "phone",
+          "roleNames",
+          "groupIds"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "roleNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "groupIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "x-apifox-orders": [
+          "email",
+          "phone",
+          "status",
+          "roleNames",
+          "groupIds"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "preferences": {
+            "type": "object",
+            "x-apifox-orders": [],
+            "properties": {},
+            "x-apifox-ignore-properties": []
+          }
+        },
+        "x-apifox-orders": [
+          "email",
+          "phone",
+          "preferences"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "oldPassword": {
+            "type": "string",
+            "format": "password"
+          },
+          "newPassword": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "oldPassword",
+          "newPassword"
+        ],
+        "x-apifox-orders": [
+          "oldPassword",
+          "newPassword"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "CreateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "x-apifox-orders": [
+          "name",
+          "description"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UpdateRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "x-apifox-orders": [
+          "name",
+          "description"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "CreateGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "x-apifox-orders": [
+          "name",
+          "description",
+          "parentId"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UpdateGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "x-apifox-orders": [
+          "name",
+          "description",
+          "parentId"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "UpdatePermissionsDto": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "resource": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              },
+              "x-apifox-orders": [
+                "resource",
+                "action"
+              ],
+              "x-apifox-ignore-properties": []
+            }
+          }
+        },
+        "x-apifox-orders": [
+          "permissions"
+        ],
+        "x-apifox-ignore-properties": [],
+        "x-apifox-folder": "Schemas"
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "用于刷新访问令牌的 JWT"
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "（可选）多端登录时需要提供的会话 ID"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ],
+        "x-apifox-orders": [
+          "refreshToken",
+          "sessionId"
+        ],
+        "x-apifox-folder": "Schemas"
+      },
+      "SecurityPolicyDto": {
+        "type": "object",
+        "properties": {
+          "passwordExpirationDays": {
+            "type": "integer",
+            "description": "密码过期天数 (0为永不过期)"
+          },
+          "passwordHistoryCount": {
+            "type": "integer",
+            "description": "密码历史记录数"
+          },
+          "maxLoginAttempts": {
+            "type": "integer",
+            "description": "最大登录尝试次数"
+          }
+        },
+        "x-apifox-folder": "Schemas"
+      },
+      "UsernameBlacklistDto": {
+        "type": "object",
+        "properties": {
+          "usernames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "用户名列表"
+          }
+        },
+        "required": [
+          "usernames"
+        ],
+        "x-apifox-folder": "Schemas"
+      },
+      "Tenant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "description": "租户名称"
+          },
+          "slug": {
+            "type": "string",
+            "description": "租户唯一标识"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "suspended"
+            ],
+            "description": "租户状态"
+          }
+        },
+        "x-apifox-folder": "Schemas"
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ],
+        "x-apifox-folder": "Schemas"
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "x-apifox-folder": "Schemas"
+      },
+      "ChangeTenantStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "suspended"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "x-apifox-folder": "Schemas"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "在 'Authorization' 请求头中输入 'Bearer ' (后面有空格)，然后跟上你的 token。"
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}
