@@ -1,13 +1,22 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { AuthGuard } from './auth/auth.guard';
-import { ProxyModule } from './proxy/proxy.module';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { AuthController } from './auth/auth.controller';
 import { WebscoketMngGateway } from './webscoket-mng/webscoket-mng.gateway';
+import { JwtStrategy } from './auth/jwt.strategy';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 @Module({
   imports: [
-    ProxyModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'default-secret-key-for-dev',
+      signOptions: { expiresIn: '1h' },
+    }),
     ClientsModule.register([
       {
         name: 'AUTH_SERVICE',
@@ -27,11 +36,20 @@ import { WebscoketMngGateway } from './webscoket-mng/webscoket-mng.gateway';
       },
     ]),
   ],
-  controllers: [],
+  controllers: [AuthController],
   providers: [
+    JwtStrategy,
     {
       provide: APP_GUARD,
-      useClass: AuthGuard,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
     },
     WebscoketMngGateway,
   ],

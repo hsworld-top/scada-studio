@@ -1,19 +1,15 @@
 import {
   Controller,
-  Post,
-  UseGuards,
-  Request,
   UnauthorizedException,
   ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { LoginDto, SsoLoginDto, RefreshTokenDto } from '@app/shared-dto-lib';
-import { AuthGuard } from '@nestjs/passport';
 import { I18nService } from 'nestjs-i18n';
 
 /**
- * AuthController 负责处理认证相关的 HTTP 和微服务请求。
+ * AuthController 负责处理认证相关的微服务请求。
  */
 @Controller('auth')
 export class AuthController {
@@ -29,6 +25,19 @@ export class AuthController {
   @MessagePattern('auth.generateCaptcha')
   async generateCaptcha() {
     return this.authService.generateCaptcha();
+  }
+
+  /**
+   * 获取验证码配置信息
+   * @returns 验证码配置
+   */
+  @MessagePattern('auth.getCaptchaConfig')
+  getCaptchaConfig() {
+    const enabled = process.env.ENABLE_CAPTCHA === 'true';
+    return {
+      enabled,
+      ttl: Number(process.env.CAPTCHA_TTL_SECONDS || 300),
+    };
   }
 
   /**
@@ -59,7 +68,7 @@ export class AuthController {
     // 3. 登录成功后处理
     await this.authService.recordLoginAttempt(loginDto, true);
     // 返回token和sessionId（普通用户）
-    const token = await this.authService.login(user);
+    const token = await this.authService.login(user, loginDto.ip);
     return { success: true, data: token };
   }
 
@@ -89,20 +98,31 @@ export class AuthController {
   }
 
   /**
-   * 处理 HTTP 的登出请求，将 token 加入黑名单。
-   * @param req 请求对象，包含认证 token
+   * 处理登出请求
+   * @param payload 登出数据
    * @returns 登出结果
    */
-  @UseGuards(AuthGuard('jwt'))
-  @Post('logout')
-  async httpLogout(@Request() req) {
-    const token = req.headers.authorization?.split(' ')[1];
-    // sessionId 可通过 header 或 body 传递，这里假设从 body 获取
-    const sessionId = req.body?.sessionId;
-    if (token) {
-      await this.authService.logout(token, sessionId);
+  @MessagePattern('auth.logout')
+  async logout(
+    @Payload()
+    payload: {
+      accessToken: string;
+      sessionId?: string;
+      operatorId?: number;
+      ip?: string;
+    },
+  ) {
+    try {
+      await this.authService.logout(
+        payload.accessToken,
+        payload.sessionId,
+        payload.operatorId,
+        payload.ip,
+      );
+      return { success: true, message: '登出成功' };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    return { success: true, message: 'Logout successful' };
   }
 
   /**

@@ -2,10 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
-import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { JwtStrategy } from './jwt.strategy';
-import { JwtRefreshStrategy } from './jwt-refresh.strategy';
 import { RedisLibModule } from '@app/redis-lib';
 import { TenantModule } from '../tenant/tenant.module';
 import { AuditLogModule } from '../audit/audit-log.module';
@@ -15,7 +12,6 @@ import { AuditLogModule } from '../audit/audit-log.module';
 @Module({
   imports: [
     UserModule,
-    PassportModule,
     RedisLibModule,
     TenantModule,
     AuditLogModule,
@@ -27,7 +23,7 @@ import { AuditLogModule } from '../audit/audit-log.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService],
   exports: [AuthService],
 })
 export class AuthModule {}

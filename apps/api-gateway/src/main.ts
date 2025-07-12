@@ -37,7 +37,7 @@ async function bootstrap() {
   await app.startAllMicroservices(); // 启动所有微服务连接
 
   // 启动 HTTP 网关服务
-  const port = Number(process.env.API_GATEWAY_PORT || 3000);
+  const port = Number(process.env.API_GATEWAY_PORT || 3001);
   await app.listen(port);
 
   logger.log(`API Gateway is running on port ${port}`, 'Bootstrap');
