@@ -43,33 +43,44 @@ export class AuthController {
   /**
    * 处理微服务的登录消息，校验用户并返回 token。
    * @param loginDto 登录数据传输对象
-   * @returns 登录结果，包含 token 或错误信息（普通用户含 sessionId）
+   * @returns 登录结果，统一格式 {code, msg, data}
    */
   @MessagePattern('auth.login')
   async login(@Payload(new ValidationPipe()) loginDto: LoginDto) {
-    // 1. 登录前置校验（失败锁定、验证码）
-    await this.authService.preLoginValidate(loginDto);
+    try {
+      // 1. 登录前置校验（失败锁定、验证码）
+      await this.authService.preLoginValidate(loginDto);
 
-    // 2. 核心用户身份验证
-    const user = await this.authService.validateUser(
-      loginDto.tenantSlug,
-      loginDto.username,
-      loginDto.password,
-    );
-
-    if (!user) {
-      // 记录登录失败
-      await this.authService.recordLoginAttempt(loginDto, false);
-      throw new UnauthorizedException(
-        this.i18n.t('common.invalid_credentials'),
+      // 2. 核心用户身份验证
+      const user = await this.authService.validateUser(
+        loginDto.tenantSlug,
+        loginDto.username,
+        loginDto.password,
       );
-    }
 
-    // 3. 登录成功后处理
-    await this.authService.recordLoginAttempt(loginDto, true);
-    // 返回token和sessionId（普通用户）
-    const token = await this.authService.login(user, loginDto.ip);
-    return { success: true, data: token };
+      if (!user) {
+        // 记录登录失败
+        await this.authService.recordLoginAttempt(loginDto, false);
+        return {
+          code: 401,
+          msg: this.i18n.t('common.invalid_credentials'),
+          data: null,
+        };
+      }
+
+      // 3. 登录成功后处理
+      await this.authService.recordLoginAttempt(loginDto, true);
+      // 返回token和sessionId（普通用户）
+      const token = await this.authService.login(user, loginDto.ip);
+      return {
+        code: 0,
+        msg: this.i18n.t('common.success'),
+        data: token,
+      };
+    } catch (error) {
+      // 统一错误处理，返回标准格式
+      return this.handleAuthError(error);
+    }
   }
 
   /**
@@ -79,7 +90,16 @@ export class AuthController {
    */
   @MessagePattern('auth.ssoLogin')
   async ssoLogin(@Payload(new ValidationPipe()) ssoLoginDto: SsoLoginDto) {
-    return this.authService.ssoLogin(ssoLoginDto);
+    try {
+      const result = await this.authService.ssoLogin(ssoLoginDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('common.success'),
+        data: result.data,
+      };
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
   }
 
   /**
@@ -90,11 +110,20 @@ export class AuthController {
   async refreshToken(
     @Payload(new ValidationPipe()) refreshTokenDto: RefreshTokenDto,
   ) {
-    // 普通用户多端登录需带 sessionId
-    return this.authService.refreshToken(
-      refreshTokenDto.refreshToken,
-      refreshTokenDto.sessionId,
-    );
+    try {
+      // 普通用户多端登录需带 sessionId
+      const result = await this.authService.refreshToken(
+        refreshTokenDto.refreshToken,
+        refreshTokenDto.sessionId,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('common.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
   }
 
   /**
@@ -119,9 +148,13 @@ export class AuthController {
         payload.operatorId,
         payload.ip,
       );
-      return { success: true, message: '登出成功' };
+      return {
+        code: 0,
+        msg: this.i18n.t('common.success'),
+        data: null,
+      };
     } catch (error) {
-      return { success: false, error: error.message };
+      return this.handleAuthError(error);
     }
   }
 
@@ -136,24 +169,163 @@ export class AuthController {
       const { token } = payload;
 
       if (!token) {
-        return { valid: false, error: 'Token不能为空' };
+        return {
+          code: 400,
+          msg: this.i18n.t('common.jwt_no_token'),
+          data: null,
+        };
       }
 
       // 检查token是否在黑名单中
       const isBlacklisted = await this.authService.isTokenBlacklisted(token);
       if (isBlacklisted) {
-        return { valid: false, error: 'Token已失效' };
+        return {
+          code: 401,
+          msg: this.i18n.t('common.jwt_token_invalidated'),
+          data: null,
+        };
       }
 
       // 验证token并获取用户信息
       const user = await this.authService.validateAccessToken(token);
       if (!user) {
-        return { valid: false, error: '无效的Token' };
+        return {
+          code: 401,
+          msg: this.i18n.t('common.jwt_token_invalidated'),
+          data: null,
+        };
       }
 
-      return { valid: true, user };
+      return {
+        code: 0,
+        msg: this.i18n.t('common.success'),
+        data: { valid: true, user },
+      };
     } catch (error) {
-      return { valid: false, error: error.message || 'Token验证失败' };
+      return this.handleAuthError(error);
     }
+  }
+
+  /**
+   * 统一处理认证相关的错误，返回标准格式
+   */
+  private handleAuthError(error: any) {
+    const message = error?.message || '';
+
+    // 租户相关错误
+    if (
+      message.includes('tenant_not_found') ||
+      message.includes('租户不存在')
+    ) {
+      return {
+        code: 400,
+        msg: this.i18n.t('common.tenant_not_found'),
+        data: null,
+      };
+    }
+
+    if (message.includes('tenant_inactive') || message.includes('租户已停用')) {
+      return {
+        code: 400,
+        msg: this.i18n.t('common.tenant_inactive'),
+        data: null,
+      };
+    }
+
+    // 用户相关错误
+    if (message.includes('user_not_found') || message.includes('用户不存在')) {
+      return {
+        code: 401,
+        msg: this.i18n.t('common.invalid_credentials'),
+        data: null,
+      };
+    }
+
+    if (message.includes('user_inactive') || message.includes('用户已停用')) {
+      return {
+        code: 401,
+        msg: this.i18n.t('common.user_inactive'),
+        data: null,
+      };
+    }
+
+    if (
+      message.includes('invalid_credentials') ||
+      message.includes('凭据无效')
+    ) {
+      return {
+        code: 401,
+        msg: this.i18n.t('common.invalid_credentials'),
+        data: null,
+      };
+    }
+
+    // 限流错误
+    if (message.includes('Too many failed login attempts')) {
+      return {
+        code: 429,
+        msg: this.i18n.t('common.too_many_login_attempts'),
+        data: null,
+      };
+    }
+
+    // 验证码错误
+    if (
+      message.includes('captcha_required') ||
+      message.includes('需要验证码')
+    ) {
+      return {
+        code: 400,
+        msg: this.i18n.t('common.captcha_required'),
+        data: null,
+      };
+    }
+
+    if (message.includes('invalid_captcha') || message.includes('验证码错误')) {
+      return {
+        code: 400,
+        msg: this.i18n.t('common.invalid_captcha'),
+        data: null,
+      };
+    }
+
+    // SSO相关错误
+    if (
+      message.includes('sso_not_configured') ||
+      message.includes('SSO未配置')
+    ) {
+      return {
+        code: 500,
+        msg: this.i18n.t('common.sso_not_configured'),
+        data: null,
+      };
+    }
+
+    if (
+      message.includes('sso_token_invalid') ||
+      message.includes('SSO令牌无效')
+    ) {
+      return {
+        code: 401,
+        msg: this.i18n.t('common.sso_token_invalid'),
+        data: null,
+      };
+    }
+
+    // Token相关错误
+    if (message.includes('Token')) {
+      return {
+        code: 401,
+        msg: message,
+        data: null,
+      };
+    }
+
+    // 默认服务器错误
+    return {
+      code: 500,
+      msg: this.i18n.t('common.service_unavailable'),
+      data: null,
+    };
   }
 }

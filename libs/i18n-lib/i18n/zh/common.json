@@ -27,5 +27,7 @@
   "captcha_required": "需要验证码",
   "invalid_captcha": "验证码无效",
   "sessionid_required": "用户刷新Token需要SessionId",
-  "no_refresh_token": "未找到刷新令牌"
+  "no_refresh_token": "未找到刷新令牌",
+  "too_many_login_attempts": "登录失败次数过多，请稍后再试",
+  "service_unavailable": "服务暂时不可用，请稍后重试"
 } 

@@ -10,13 +10,21 @@ import {
   Param,
   Headers,
   Ip,
+  BadRequestException,
+  UnauthorizedException,
+  ForbiddenException,
+  NotFoundException,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+  HttpException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
-import { firstValueFrom, timeout, catchError } from 'rxjs';
+import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { LoginDto, RefreshTokenDto, SsoLoginDto } from '@app/shared-dto-lib';
 import { ResponseUtil } from '../common/utils/response.util';
 import { ApiResponse } from '../common/interfaces/api-response.interface';
+import { ERROR_MESSAGES } from '../common/constants/error-messages';
 
 /**
  * 认证控制器 - 处理用户登录、注册、token刷新等认证相关的HTTP请求
@@ -46,12 +54,27 @@ export class AuthController {
       this.authClient.send('auth.login', loginDto).pipe(
         timeout(10000), // 10秒超时
         catchError((error) => {
-          throw error;
+          // 网络或系统级错误
+          throw new InternalServerErrorException(
+            ERROR_MESSAGES.SERVICE_UNAVAILABLE,
+          );
         }),
       ),
     );
 
-    return result;
+    // 检查微服务返回的结果格式
+    if (result && typeof result === 'object' && 'code' in result) {
+      // 如果返回了错误码，转换为HTTP异常
+      if (result.code !== 0) {
+        this.throwHttpException(result.code, result.msg);
+      }
+
+      // 成功时返回原格式（保持{code: 0, msg: 'xxx', data: {...}}格式）
+      return result;
+    }
+
+    // 兜底处理
+    throw new InternalServerErrorException(ERROR_MESSAGES.LOGIN_FAILED);
   }
 
   /**
@@ -70,12 +93,22 @@ export class AuthController {
       this.authClient.send('auth.ssoLogin', { ...ssoLoginDto, ip }).pipe(
         timeout(10000),
         catchError((error) => {
-          throw error;
+          throw new InternalServerErrorException(
+            ERROR_MESSAGES.SSO_SERVICE_UNAVAILABLE,
+          );
         }),
       ),
     );
 
-    return result;
+    // 检查微服务返回的结果
+    if (result && typeof result === 'object' && 'code' in result) {
+      if (result.code !== 0) {
+        this.throwHttpException(result.code, result.msg);
+      }
+      return result;
+    }
+
+    throw new InternalServerErrorException(ERROR_MESSAGES.SSO_LOGIN_FAILED);
   }
 
   /**
@@ -96,12 +129,22 @@ export class AuthController {
         .pipe(
           timeout(10000),
           catchError((error) => {
-            throw error;
+            throw new InternalServerErrorException(
+              ERROR_MESSAGES.TOKEN_REFRESH_SERVICE_UNAVAILABLE,
+            );
           }),
         ),
     );
 
-    return result;
+    // 检查微服务返回的结果
+    if (result && typeof result === 'object' && 'code' in result) {
+      if (result.code !== 0) {
+        this.throwHttpException(result.code, result.msg);
+      }
+      return result;
+    }
+
+    throw new InternalServerErrorException(ERROR_MESSAGES.TOKEN_REFRESH_FAILED);
   }
 
   /**
@@ -118,33 +161,39 @@ export class AuthController {
     @Body() body: { sessionId?: string },
     @Ip() ip: string,
   ) {
-    try {
-      const token = req.headers.authorization?.split(' ')[1];
-      const { sessionId } = body;
+    const token = req.headers.authorization?.split(' ')[1];
+    const { sessionId } = body;
 
-      if (!token) {
-        return { success: false, message: '缺少认证token' };
-      }
-
-      const result = await firstValueFrom(
-        this.authClient
-          .send('auth.logout', {
-            accessToken: token,
-            sessionId,
-            ip,
-          })
-          .pipe(
-            timeout(10000),
-            catchError((error) => {
-              throw error;
-            }),
-          ),
-      );
-
-      return { success: true, message: '登出成功' };
-    } catch (error) {
-      return { success: false, message: '登出失败' };
+    if (!token) {
+      throw new BadRequestException(ERROR_MESSAGES.MISSING_AUTH_TOKEN);
     }
+
+    const result = await firstValueFrom(
+      this.authClient
+        .send('auth.logout', {
+          accessToken: token,
+          sessionId,
+          ip,
+        })
+        .pipe(
+          timeout(10000),
+          catchError((error) => {
+            throw new InternalServerErrorException(
+              ERROR_MESSAGES.LOGOUT_SERVICE_UNAVAILABLE,
+            );
+          }),
+        ),
+    );
+
+    // 检查微服务返回的结果
+    if (result && typeof result === 'object' && 'code' in result) {
+      if (result.code !== 0) {
+        this.throwHttpException(result.code, result.msg);
+      }
+      return result;
+    }
+
+    throw new InternalServerErrorException(ERROR_MESSAGES.LOGOUT_FAILED);
   }
 
   /**
@@ -154,28 +203,29 @@ export class AuthController {
    */
   @Get('captcha/:captchaId')
   async getCaptcha(@Param('captchaId') captchaId: string) {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send('auth.generateCaptcha', {}).pipe(
-          timeout(5000),
-          catchError((error) => {
-            throw error;
-          }),
-        ),
-      );
+    const result = await firstValueFrom(
+      this.authClient.send('auth.generateCaptcha', {}).pipe(
+        timeout(5000),
+        catchError((error) => {
+          throw new InternalServerErrorException(
+            ERROR_MESSAGES.CAPTCHA_SERVICE_UNAVAILABLE,
+          );
+        }),
+      ),
+    );
 
-      if (result && result.svg) {
-        return {
-          success: true,
-          data: result.svg,
-          captchaId: result.captchaId,
-          contentType: 'image/svg+xml',
-        };
-      } else {
-        return { success: false, message: '验证码生成失败' };
-      }
-    } catch (error) {
-      return { success: false, message: '获取验证码失败' };
+    // 对于验证码接口，我们需要保持原有的响应格式兼容性
+    if (result && result.svg) {
+      return {
+        success: true,
+        data: result.svg,
+        captchaId: result.captchaId,
+        contentType: 'image/svg+xml',
+      };
+    } else {
+      throw new InternalServerErrorException(
+        ERROR_MESSAGES.CAPTCHA_GENERATION_FAILED,
+      );
     }
   }
 
@@ -185,20 +235,17 @@ export class AuthController {
    */
   @Get('captcha-config')
   async getCaptchaConfig() {
-    try {
-      const result = await firstValueFrom(
-        this.authClient.send('auth.getCaptchaConfig', {}).pipe(
-          timeout(5000),
-          catchError((error) => {
-            throw error;
-          }),
-        ),
-      );
+    const result = await firstValueFrom(
+      this.authClient.send('auth.getCaptchaConfig', {}).pipe(
+        timeout(5000),
+        catchError((error) => {
+          // 验证码配置获取失败时返回默认配置
+          return of({ enabled: false });
+        }),
+      ),
+    );
 
-      return result;
-    } catch (error) {
-      return { enabled: false };
-    }
+    return result;
   }
 
   /**
@@ -209,5 +256,34 @@ export class AuthController {
   @Get('me')
   getCurrentUser(@Request() req: any): ApiResponse {
     return ResponseUtil.success(req.user, '获取用户信息成功');
+  }
+
+  /**
+   * 根据错误码抛出相应的HTTP异常
+   */
+  private throwHttpException(code: number, message: string): never {
+    switch (code) {
+      case 400:
+        throw new BadRequestException(message);
+      case 401:
+        throw new UnauthorizedException(message);
+      case 403:
+        throw new ForbiddenException(message);
+      case 404:
+        throw new NotFoundException(message);
+      case 429:
+        throw new HttpException(message, HttpStatus.TOO_MANY_REQUESTS);
+      case 500:
+        throw new InternalServerErrorException(message);
+      case 503:
+        throw new ServiceUnavailableException(message);
+      default:
+        // 对于其他4xx错误，统一使用BadRequestException
+        if (code >= 400 && code < 500) {
+          throw new BadRequestException(message);
+        }
+        // 对于其他5xx错误，统一使用InternalServerErrorException
+        throw new InternalServerErrorException(message);
+    }
   }
 }

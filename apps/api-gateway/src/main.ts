@@ -16,23 +16,23 @@ async function bootstrap() {
     { logger },
   );
 
-  // 连接到 auth-service 微服务
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.TCP,
-    options: {
-      host: process.env.AUTH_SERVICE_HOST || '127.0.0.1',
-      port: Number(process.env.AUTH_SERVICE_PORT || 3002),
-    },
-  });
+  // // 连接到 auth-service 微服务
+  // app.connectMicroservice<MicroserviceOptions>({
+  //   transport: Transport.TCP,
+  //   options: {
+  //     host: process.env.AUTH_SERVICE_HOST || '127.0.0.1',
+  //     port: Number(process.env.AUTH_SERVICE_PORT || 3002),
+  //   },
+  // });
 
-  // 连接到 project-studio 微服务
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.TCP,
-    options: {
-      host: process.env.PROJECT_STUDIO_HOST || '127.0.0.1',
-      port: Number(process.env.PROJECT_STUDIO_PORT || 3003),
-    },
-  });
+  // // 连接到 project-studio 微服务
+  // app.connectMicroservice<MicroserviceOptions>({
+  //   transport: Transport.TCP,
+  //   options: {
+  //     host: process.env.PROJECT_STUDIO_HOST || '127.0.0.1',
+  //     port: Number(process.env.PROJECT_STUDIO_PORT || 3003),
+  //   },
+  // });
 
   await app.startAllMicroservices(); // 启动所有微服务连接
 
