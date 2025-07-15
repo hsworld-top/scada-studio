@@ -1,0 +1,15 @@
+{
+  "password_decrypt_failed": "Password decryption failed",
+  "login_failed": "Login failed",
+  "sso_login_failed": "SSO login failed",
+  "token_refresh_failed": "Token refresh failed",
+  "logout_failed": "Logout failed",
+  "missing_auth_token": "Missing authentication token",
+  "public_key_success": "Public key retrieved successfully",
+  "captcha_generation_failed": "Captcha generation failed",
+  "service_unavailable": "Service unavailable",
+  "auth_service_timeout": "Authentication service timeout",
+  "auth_service_unavailable": "Authentication service unavailable",
+  "auth_service_dns_error": "Authentication service DNS resolution failed",
+  "service_error": "Service error"
+}

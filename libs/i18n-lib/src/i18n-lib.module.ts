@@ -1,5 +1,5 @@
 import { Module, Global } from '@nestjs/common';
-import { I18nModule, QueryResolver, HeaderResolver } from 'nestjs-i18n';
+import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n';
 import * as path from 'path';
 
 @Global()
@@ -12,8 +12,7 @@ import * as path from 'path';
         watch: true,
       },
       resolvers: [
-        { use: QueryResolver, options: ['lang', 'locale', 'l'] },
-        new HeaderResolver(['x-lang', 'accept-language']),
+        { use: AcceptLanguageResolver, options: { matchType: 'strict' } },
       ],
     }),
   ],

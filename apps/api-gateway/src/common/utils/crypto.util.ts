@@ -27,7 +27,7 @@ export class CryptoUtil {
 
   // 配置参数
   private readonly KEY_EXPIRY_MINUTES = 10; // 密钥对过期时间（分钟）
-  private readonly MAX_CACHED_KEYS = 100; // 最大缓存密钥对数量
+  private readonly MAX_CACHED_KEYS = 10000; // 最大缓存密钥对数量
   private readonly CLEANUP_INTERVAL = 5 * 60 * 1000; // 清理间隔（5分钟）
 
   constructor() {

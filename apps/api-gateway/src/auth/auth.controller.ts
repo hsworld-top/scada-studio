@@ -17,24 +17,36 @@ import {
   InternalServerErrorException,
   ServiceUnavailableException,
   HttpException,
+  Logger,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
-import { firstValueFrom, timeout, catchError, of } from 'rxjs';
+import { I18nService } from 'nestjs-i18n';
+import {
+  firstValueFrom,
+  timeout,
+  catchError,
+  of,
+  retry,
+  throwError,
+} from 'rxjs';
 import { LoginDto, RefreshTokenDto, SsoLoginDto } from '@app/shared-dto-lib';
 import { ResponseUtil } from '../common/utils/response.util';
 import { CryptoUtil } from '../common/utils/crypto.util';
 import { ApiResponse } from '../common/interfaces/api-response.interface';
-import { ERROR_MESSAGES } from '../common/constants/error-messages';
 
 /**
  * 认证控制器 - 处理用户登录、注册、token刷新等认证相关的HTTP请求
  */
 @Controller('api/auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
     private readonly cryptoUtil: CryptoUtil,
+    private readonly i18n: I18nService,
+    private readonly responseUtil: ResponseUtil,
   ) {}
 
   /**
@@ -52,44 +64,48 @@ export class AuthController {
     // 添加客户端IP到请求数据
     loginDto.ip = ip;
 
-    // 如果传入了keyId，则使用新的加密方式解密密码
-    if (loginDto.keyId && this.cryptoUtil.hasKeyId(loginDto.keyId)) {
-      try {
+    try {
+      // 解密密码
+      if (loginDto.keyId) {
         loginDto.password = this.cryptoUtil.decryptPassword(
           loginDto.keyId,
           loginDto.password,
         );
-      } catch (error) {
-        throw new BadRequestException('密码解密失败，请重新获取公钥后重试');
       }
-    }
-    // 如果没有keyId，保持原样（兼容旧版本客户端）
-
-    const result = await firstValueFrom(
-      this.authClient.send('auth.login', loginDto).pipe(
-        timeout(10000), // 10秒超时
-        catchError((error) => {
-          // 网络或系统级错误
-          throw new InternalServerErrorException(
-            ERROR_MESSAGES.SERVICE_UNAVAILABLE,
-          );
-        }),
-      ),
-    );
-
-    // 检查微服务返回的结果格式
-    if (result && typeof result === 'object' && 'code' in result) {
-      // 如果返回了错误码，转换为HTTP异常
-      if (result.code !== 0) {
-        this.throwHttpException(result.code, result.msg);
-      }
-
-      // 成功时返回原格式（保持{code: 0, msg: 'xxx', data: {...}}格式）
-      return result;
+    } catch (error) {
+      this.logger.warn(`密码解密失败 - IP: ${ip}, keyId: ${loginDto.keyId}`);
+      const msg = this.i18n.t('gateway.password_decrypt_failed');
+      throw new BadRequestException(msg);
     }
 
-    // 兜底处理
-    throw new InternalServerErrorException(ERROR_MESSAGES.LOGIN_FAILED);
+    try {
+      const result = await this.callAuthService('auth.login', loginDto, {
+        timeout: 5000,
+        retries: 2,
+        operation: '用户登录',
+      });
+
+      // 检查微服务返回的结果格式，直接返回auth-service的响应
+      if (result && typeof result === 'object' && 'code' in result) {
+        return result;
+      }
+
+      // 兜底处理 - 这是网关自己的错误
+      this.logger.error(`登录返回格式异常 - IP: ${ip}, result:`, result);
+      const msg = this.i18n.t('gateway.login_failed');
+      throw new InternalServerErrorException(msg);
+    } catch (error) {
+      // 如果是网关自己抛出的异常，继续抛出
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // 网关层面的系统异常
+      this.logger.error(`登录异常 - IP: ${ip}:`, error);
+      throw new InternalServerErrorException(
+        this.i18n.t('gateway.login_failed'),
+      );
+    }
   }
 
   /**
@@ -104,26 +120,38 @@ export class AuthController {
     @Body(new ValidationPipe()) ssoLoginDto: SsoLoginDto,
     @Ip() ip: string,
   ) {
-    const result = await firstValueFrom(
-      this.authClient.send('auth.ssoLogin', { ...ssoLoginDto, ip }).pipe(
-        timeout(10000),
-        catchError((error) => {
-          throw new InternalServerErrorException(
-            ERROR_MESSAGES.SSO_SERVICE_UNAVAILABLE,
-          );
-        }),
-      ),
-    );
+    try {
+      const result = await this.callAuthService(
+        'auth.ssoLogin',
+        { ...ssoLoginDto, ip },
+        {
+          timeout: 5000,
+          retries: 1,
+          operation: 'SSO登录',
+        },
+      );
 
-    // 检查微服务返回的结果
-    if (result && typeof result === 'object' && 'code' in result) {
-      if (result.code !== 0) {
-        this.throwHttpException(result.code, result.msg);
+      // 检查微服务返回的结果，直接返回auth-service的响应
+      if (result && typeof result === 'object' && 'code' in result) {
+        return result;
       }
-      return result;
-    }
 
-    throw new InternalServerErrorException(ERROR_MESSAGES.SSO_LOGIN_FAILED);
+      // 兜底处理 - 这是网关自己的错误
+      this.logger.error(`SSO登录返回格式异常 - IP: ${ip}, result:`, result);
+      const msg = this.i18n.t('gateway.sso_login_failed');
+      throw new InternalServerErrorException(msg);
+    } catch (error) {
+      // 如果是网关自己抛出的异常，继续抛出
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // 网关层面的系统异常
+      this.logger.error(`SSO登录异常 - IP: ${ip}:`, error);
+      throw new InternalServerErrorException(
+        this.i18n.t('gateway.sso_login_failed'),
+      );
+    }
   }
 
   /**
@@ -132,10 +160,10 @@ export class AuthController {
    */
   @Get('public-key')
   @HttpCode(HttpStatus.OK)
-  getPublicKey() {
+  async getPublicKey() {
     try {
       const keyInfo = this.cryptoUtil.generateKeyPair();
-      return ResponseUtil.success(
+      return this.responseUtil.success(
         {
           keyId: keyInfo.keyId,
           publicKey: keyInfo.publicKey,
@@ -145,12 +173,12 @@ export class AuthController {
           hash: 'SHA-256',
           usage: '前端密码加密专用，登录时需同时传递keyId和加密密码',
         },
-        '公钥获取成功',
+        'gateway.public_key_success',
       );
     } catch (error) {
-      throw new InternalServerErrorException(
-        ERROR_MESSAGES.SERVICE_UNAVAILABLE,
-      );
+      this.logger.error('生成公钥失败:', error);
+      const msg = this.i18n.t('gateway.service_unavailable');
+      throw new InternalServerErrorException(msg);
     }
   }
 
@@ -166,28 +194,38 @@ export class AuthController {
     @Body(new ValidationPipe()) refreshTokenDto: RefreshTokenDto,
     @Ip() ip: string,
   ) {
-    const result = await firstValueFrom(
-      this.authClient
-        .send('auth.refreshToken', { ...refreshTokenDto, ip })
-        .pipe(
-          timeout(10000),
-          catchError((error) => {
-            throw new InternalServerErrorException(
-              ERROR_MESSAGES.TOKEN_REFRESH_SERVICE_UNAVAILABLE,
-            );
-          }),
-        ),
-    );
+    try {
+      const result = await this.callAuthService(
+        'auth.refreshToken',
+        { ...refreshTokenDto, ip },
+        {
+          timeout: 5000,
+          retries: 1,
+          operation: 'Token刷新',
+        },
+      );
 
-    // 检查微服务返回的结果
-    if (result && typeof result === 'object' && 'code' in result) {
-      if (result.code !== 0) {
-        this.throwHttpException(result.code, result.msg);
+      // 检查微服务返回的结果，直接返回auth-service的响应
+      if (result && typeof result === 'object' && 'code' in result) {
+        return result;
       }
-      return result;
-    }
 
-    throw new InternalServerErrorException(ERROR_MESSAGES.TOKEN_REFRESH_FAILED);
+      // 兜底处理 - 这是网关自己的错误
+      this.logger.error(`Token刷新返回格式异常 - IP: ${ip}, result:`, result);
+      const msg = this.i18n.t('gateway.token_refresh_failed');
+      throw new InternalServerErrorException(msg);
+    } catch (error) {
+      // 如果是网关自己抛出的异常，继续抛出
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // 网关层面的系统异常
+      this.logger.error(`Token刷新异常 - IP: ${ip}:`, error);
+      throw new InternalServerErrorException(
+        this.i18n.t('gateway.token_refresh_failed'),
+      );
+    }
   }
 
   /**
@@ -204,70 +242,87 @@ export class AuthController {
     @Body() body: { sessionId?: string },
     @Ip() ip: string,
   ) {
-    const token = req.headers.authorization?.split(' ')[1];
-    const { sessionId } = body;
+    const { sessionId, access_token: token } = req.user;
 
     if (!token) {
-      throw new BadRequestException(ERROR_MESSAGES.MISSING_AUTH_TOKEN);
+      const msg = this.i18n.t('gateway.missing_auth_token');
+      throw new BadRequestException(msg);
     }
 
-    const result = await firstValueFrom(
-      this.authClient
-        .send('auth.logout', {
+    try {
+      const result = await this.callAuthService(
+        'auth.logout',
+        {
           accessToken: token,
           sessionId,
           ip,
-        })
-        .pipe(
-          timeout(10000),
-          catchError((error) => {
-            throw new InternalServerErrorException(
-              ERROR_MESSAGES.LOGOUT_SERVICE_UNAVAILABLE,
-            );
-          }),
-        ),
-    );
+        },
+        {
+          timeout: 5000,
+          retries: 1,
+          operation: '用户登出',
+        },
+      );
 
-    // 检查微服务返回的结果
-    if (result && typeof result === 'object' && 'code' in result) {
-      if (result.code !== 0) {
-        this.throwHttpException(result.code, result.msg);
+      // 检查微服务返回的结果，直接返回auth-service的响应
+      if (result && typeof result === 'object' && 'code' in result) {
+        return result;
       }
-      return result;
-    }
 
-    throw new InternalServerErrorException(ERROR_MESSAGES.LOGOUT_FAILED);
+      // 兜底处理 - 这是网关自己的错误
+      this.logger.error(`登出返回格式异常 - IP: ${ip}, result:`, result);
+      const msg = this.i18n.t('gateway.logout_failed');
+      throw new InternalServerErrorException(msg);
+    } catch (error) {
+      // 如果是网关自己抛出的异常，继续抛出
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // 网关层面的系统异常
+      this.logger.error(`登出异常 - IP: ${ip}:`, error);
+      throw new InternalServerErrorException(
+        this.i18n.t('gateway.logout_failed'),
+      );
+    }
   }
 
   /**
    * 获取图形验证码
-   * @param captchaId 验证码ID（预留参数，当前每次生成新的验证码）
    * @returns 验证码数据
    */
-  @Get('captcha/:captchaId')
-  async getCaptcha(@Param('captchaId') captchaId: string) {
-    const result = await firstValueFrom(
-      this.authClient.send('auth.generateCaptcha', {}).pipe(
-        timeout(5000),
-        catchError((error) => {
-          throw new InternalServerErrorException(
-            ERROR_MESSAGES.CAPTCHA_SERVICE_UNAVAILABLE,
-          );
-        }),
-      ),
-    );
+  @Get('captcha')
+  async getCaptcha() {
+    try {
+      const result = await this.callAuthService(
+        'auth.generateCaptcha',
+        {},
+        {
+          timeout: 5000,
+          retries: 1,
+          operation: '获取验证码',
+        },
+      );
 
-    // 对于验证码接口，我们需要保持原有的响应格式兼容性
-    if (result && result.svg) {
-      return {
-        success: true,
-        data: result.svg,
-        captchaId: result.captchaId,
-        contentType: 'image/svg+xml',
-      };
-    } else {
+      // 检查微服务返回的结果，直接返回auth-service的响应
+      if (result && typeof result === 'object' && 'code' in result) {
+        return result;
+      }
+
+      // 兜底处理 - 这是网关自己的错误
+      this.logger.error('验证码返回格式异常, result:', result);
+      const msg = this.i18n.t('gateway.captcha_generation_failed');
+      throw new InternalServerErrorException(msg);
+    } catch (error) {
+      // 如果是网关自己抛出的异常，继续抛出
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // 网关层面的系统异常
+      this.logger.error('验证码生成异常:', error);
       throw new InternalServerErrorException(
-        ERROR_MESSAGES.CAPTCHA_GENERATION_FAILED,
+        this.i18n.t('gateway.captcha_generation_failed'),
       );
     }
   }
@@ -278,17 +333,38 @@ export class AuthController {
    */
   @Get('captcha-config')
   async getCaptchaConfig() {
-    const result = await firstValueFrom(
-      this.authClient.send('auth.getCaptchaConfig', {}).pipe(
-        timeout(5000),
-        catchError((error) => {
-          // 验证码配置获取失败时返回默认配置
-          return of({ enabled: false });
-        }),
-      ),
-    );
+    try {
+      const result = await this.callAuthService(
+        'auth.getCaptchaConfig',
+        {},
+        {
+          timeout: 5000,
+          retries: 1,
+          operation: '获取验证码配置',
+        },
+      );
 
-    return result;
+      // 检查微服务返回的结果，直接返回auth-service的响应
+      if (result && typeof result === 'object' && 'code' in result) {
+        return result;
+      }
+
+      // 兜底处理 - 这是网关自己的错误
+      this.logger.error('验证码配置返回格式异常, result:', result);
+      const msg = this.i18n.t('gateway.service_error');
+      throw new InternalServerErrorException(msg);
+    } catch (error) {
+      // 如果是网关自己抛出的异常，继续抛出
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // 网关层面的系统异常
+      this.logger.error('获取验证码配置异常:', error);
+      throw new InternalServerErrorException(
+        this.i18n.t('gateway.service_error'),
+      );
+    }
   }
 
   /**
@@ -297,36 +373,64 @@ export class AuthController {
    * @returns 用户信息
    */
   @Get('me')
-  getCurrentUser(@Request() req: any): ApiResponse {
-    return ResponseUtil.success(req.user, '获取用户信息成功');
+  async getCurrentUser(@Request() req: any): Promise<ApiResponse> {
+    return await this.responseUtil.success(req.user, 'get_user_info_success');
   }
 
   /**
-   * 根据错误码抛出相应的HTTP异常
+   * 调用认证服务的通用方法
+   * @private
    */
-  private throwHttpException(code: number, message: string): never {
-    switch (code) {
-      case 400:
-        throw new BadRequestException(message);
-      case 401:
-        throw new UnauthorizedException(message);
-      case 403:
-        throw new ForbiddenException(message);
-      case 404:
-        throw new NotFoundException(message);
-      case 429:
-        throw new HttpException(message, HttpStatus.TOO_MANY_REQUESTS);
-      case 500:
-        throw new InternalServerErrorException(message);
-      case 503:
-        throw new ServiceUnavailableException(message);
-      default:
-        // 对于其他4xx错误，统一使用BadRequestException
-        if (code >= 400 && code < 500) {
-          throw new BadRequestException(message);
-        }
-        // 对于其他5xx错误，统一使用InternalServerErrorException
-        throw new InternalServerErrorException(message);
-    }
+  private async callAuthService(
+    pattern: string,
+    data: any,
+    options: { timeout: number; retries: number; operation: string },
+  ) {
+    return await firstValueFrom(
+      this.authClient.send(pattern, data).pipe(
+        timeout(options.timeout),
+        retry({
+          count: options.retries,
+          delay: (error, retryIndex) => {
+            this.logger.warn(
+              `${options.operation}失败，第${retryIndex}次重试: ${error.message}`,
+            );
+            return of(null).pipe(timeout(1000)); // 1秒后重试
+          },
+        }),
+        catchError((error) => {
+          // 网络或系统级错误的详细分类
+          if (error.name === 'TimeoutError') {
+            this.logger.error(
+              `${options.operation}超时 - 超时时间: ${options.timeout}ms`,
+            );
+            throw new ServiceUnavailableException(
+              this.i18n.t('gateway.auth_service_timeout'),
+            );
+          }
+
+          if (error.code === 'ECONNREFUSED') {
+            this.logger.error(
+              `${options.operation}连接被拒绝 - Auth服务可能未启动`,
+            );
+            throw new ServiceUnavailableException(
+              this.i18n.t('gateway.auth_service_unavailable'),
+            );
+          }
+
+          if (error.code === 'ENOTFOUND') {
+            this.logger.error(`${options.operation}服务地址解析失败`);
+            throw new ServiceUnavailableException(
+              this.i18n.t('gateway.auth_service_dns_error'),
+            );
+          }
+
+          this.logger.error(`${options.operation}服务调用失败:`, error);
+          throw new InternalServerErrorException(
+            this.i18n.t('gateway.service_error'),
+          );
+        }),
+      ),
+    );
   }
 }

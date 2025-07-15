@@ -1,5 +1,4 @@
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ApiGatewayModule } from './api-gateway.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppLogger } from '@app/logger-lib'; // 引入自定义日志库
@@ -11,35 +10,28 @@ async function bootstrap() {
     env: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   });
 
+  // 验证必要的环境变量
+  const requiredEnvVars = ['JWT_SECRET'];
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      logger.error(`缺少必要的环境变量: ${envVar}`);
+      process.exit(1);
+    }
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(
     ApiGatewayModule,
     { logger },
   );
 
-  // // 连接到 auth-service 微服务
-  // app.connectMicroservice<MicroserviceOptions>({
-  //   transport: Transport.TCP,
-  //   options: {
-  //     host: process.env.AUTH_SERVICE_HOST || '127.0.0.1',
-  //     port: Number(process.env.AUTH_SERVICE_PORT || 3002),
-  //   },
-  // });
-
-  // // 连接到 project-studio 微服务
-  // app.connectMicroservice<MicroserviceOptions>({
-  //   transport: Transport.TCP,
-  //   options: {
-  //     host: process.env.PROJECT_STUDIO_HOST || '127.0.0.1',
-  //     port: Number(process.env.PROJECT_STUDIO_PORT || 3003),
-  //   },
-  // });
-
-  await app.startAllMicroservices(); // 启动所有微服务连接
-
   // 启动 HTTP 网关服务
   const port = Number(process.env.API_GATEWAY_PORT || 3001);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`API Gateway is running on port ${port}`, 'Bootstrap');
 }
-bootstrap();
+
+bootstrap().catch((error) => {
+  console.error('Failed to start API Gateway:', error);
+  process.exit(1);
+});

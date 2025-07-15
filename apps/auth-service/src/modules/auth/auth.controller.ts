@@ -20,24 +20,43 @@ export class AuthController {
 
   /**
    * 生成图形验证码。
-   * @returns {Promise<{ captchaId: string, svg: string }>} 验证码ID和SVG图像数据
+   * @returns 统一格式 {code, msg, data}
    */
   @MessagePattern('auth.generateCaptcha')
   async generateCaptcha() {
-    return this.authService.generateCaptcha();
+    try {
+      const result = await this.authService.generateCaptcha();
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.captcha_generated_success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
   }
 
   /**
    * 获取验证码配置信息
-   * @returns 验证码配置
+   * @returns 统一格式 {code, msg, data}
    */
   @MessagePattern('auth.getCaptchaConfig')
   getCaptchaConfig() {
-    const enabled = process.env.ENABLE_CAPTCHA === 'true';
-    return {
-      enabled,
-      ttl: Number(process.env.CAPTCHA_TTL_SECONDS || 300),
-    };
+    try {
+      const enabled = process.env.ENABLE_CAPTCHA === 'true';
+      const config = {
+        enabled,
+        ttl: Number(process.env.CAPTCHA_TTL_SECONDS || 300),
+      };
+
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: config,
+      };
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
   }
 
   /**
@@ -63,7 +82,7 @@ export class AuthController {
         await this.authService.recordLoginAttempt(loginDto, false);
         return {
           code: 401,
-          msg: this.i18n.t('common.invalid_credentials'),
+          msg: this.i18n.t('auth.invalid_credentials'),
           data: null,
         };
       }
@@ -74,7 +93,7 @@ export class AuthController {
       const token = await this.authService.login(user, loginDto.ip);
       return {
         code: 0,
-        msg: this.i18n.t('common.success'),
+        msg: this.i18n.t('auth.login_success'),
         data: token,
       };
     } catch (error) {
@@ -94,7 +113,7 @@ export class AuthController {
       const result = await this.authService.ssoLogin(ssoLoginDto);
       return {
         code: 0,
-        msg: this.i18n.t('common.success'),
+        msg: this.i18n.t('auth.login_success'),
         data: result.data,
       };
     } catch (error) {
@@ -118,7 +137,7 @@ export class AuthController {
       );
       return {
         code: 0,
-        msg: this.i18n.t('common.success'),
+        msg: this.i18n.t('auth.refresh_token_success'),
         data: result,
       };
     } catch (error) {
@@ -142,16 +161,17 @@ export class AuthController {
     },
   ) {
     try {
-      await this.authService.logout(
+      const result = await this.authService.logout(
         payload.accessToken,
         payload.sessionId,
         payload.operatorId,
         payload.ip,
       );
+
       return {
         code: 0,
-        msg: this.i18n.t('common.success'),
-        data: null,
+        msg: result.message,
+        data: { success: result.success },
       };
     } catch (error) {
       return this.handleAuthError(error);
@@ -171,7 +191,7 @@ export class AuthController {
       if (!token) {
         return {
           code: 400,
-          msg: this.i18n.t('common.jwt_no_token'),
+          msg: this.i18n.t('auth.jwt_no_token'),
           data: null,
         };
       }
@@ -181,7 +201,7 @@ export class AuthController {
       if (isBlacklisted) {
         return {
           code: 401,
-          msg: this.i18n.t('common.jwt_token_invalidated'),
+          msg: this.i18n.t('auth.jwt_token_invalidated'),
           data: null,
         };
       }
@@ -191,14 +211,14 @@ export class AuthController {
       if (!user) {
         return {
           code: 401,
-          msg: this.i18n.t('common.jwt_token_invalidated'),
+          msg: this.i18n.t('auth.jwt_token_invalidated'),
           data: null,
         };
       }
 
       return {
         code: 0,
-        msg: this.i18n.t('common.success'),
+        msg: this.i18n.t('auth.validate_token_success'),
         data: { valid: true, user },
       };
     } catch (error) {
@@ -219,7 +239,7 @@ export class AuthController {
     ) {
       return {
         code: 400,
-        msg: this.i18n.t('common.tenant_not_found'),
+        msg: this.i18n.t('auth.tenant_not_found'),
         data: null,
       };
     }
@@ -227,7 +247,7 @@ export class AuthController {
     if (message.includes('tenant_inactive') || message.includes('租户已停用')) {
       return {
         code: 400,
-        msg: this.i18n.t('common.tenant_inactive'),
+        msg: this.i18n.t('auth.tenant_inactive'),
         data: null,
       };
     }
@@ -236,7 +256,7 @@ export class AuthController {
     if (message.includes('user_not_found') || message.includes('用户不存在')) {
       return {
         code: 401,
-        msg: this.i18n.t('common.invalid_credentials'),
+        msg: this.i18n.t('auth.invalid_credentials'),
         data: null,
       };
     }
@@ -244,7 +264,7 @@ export class AuthController {
     if (message.includes('user_inactive') || message.includes('用户已停用')) {
       return {
         code: 401,
-        msg: this.i18n.t('common.user_inactive'),
+        msg: this.i18n.t('auth.user_inactive'),
         data: null,
       };
     }
@@ -255,7 +275,7 @@ export class AuthController {
     ) {
       return {
         code: 401,
-        msg: this.i18n.t('common.invalid_credentials'),
+        msg: this.i18n.t('auth.invalid_credentials'),
         data: null,
       };
     }
@@ -264,7 +284,7 @@ export class AuthController {
     if (message.includes('Too many failed login attempts')) {
       return {
         code: 429,
-        msg: this.i18n.t('common.too_many_login_attempts'),
+        msg: this.i18n.t('auth.too_many_login_attempts'),
         data: null,
       };
     }
@@ -276,7 +296,7 @@ export class AuthController {
     ) {
       return {
         code: 400,
-        msg: this.i18n.t('common.captcha_required'),
+        msg: this.i18n.t('auth.captcha_required'),
         data: null,
       };
     }
@@ -284,7 +304,7 @@ export class AuthController {
     if (message.includes('invalid_captcha') || message.includes('验证码错误')) {
       return {
         code: 400,
-        msg: this.i18n.t('common.invalid_captcha'),
+        msg: this.i18n.t('auth.invalid_captcha'),
         data: null,
       };
     }
@@ -296,7 +316,7 @@ export class AuthController {
     ) {
       return {
         code: 500,
-        msg: this.i18n.t('common.sso_not_configured'),
+        msg: this.i18n.t('auth.sso_not_configured'),
         data: null,
       };
     }
@@ -307,7 +327,7 @@ export class AuthController {
     ) {
       return {
         code: 401,
-        msg: this.i18n.t('common.sso_token_invalid'),
+        msg: this.i18n.t('auth.sso_token_invalid'),
         data: null,
       };
     }
@@ -321,10 +341,17 @@ export class AuthController {
       };
     }
 
+    if (message) {
+      return {
+        code: 500,
+        msg: message,
+        data: null,
+      };
+    }
     // 默认服务器错误
     return {
       code: 500,
-      msg: this.i18n.t('common.service_unavailable'),
+      msg: this.i18n.t('auth.service_unavailable'),
       data: null,
     };
   }

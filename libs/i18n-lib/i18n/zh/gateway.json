@@ -1,0 +1,15 @@
+{
+  "password_decrypt_failed": "密码解密失败",
+  "login_failed": "登录失败",
+  "sso_login_failed": "SSO登录失败",
+  "token_refresh_failed": "Token刷新失败",
+  "logout_failed": "登出失败",
+  "missing_auth_token": "缺少认证令牌",
+  "public_key_success": "公钥获取成功",
+  "captcha_generation_failed": "验证码生成失败",
+  "service_unavailable": "服务不可用",
+  "auth_service_timeout": "认证服务超时",
+  "auth_service_unavailable": "认证服务不可用",
+  "auth_service_dns_error": "认证服务DNS解析失败",
+  "service_error": "服务错误"
+}
