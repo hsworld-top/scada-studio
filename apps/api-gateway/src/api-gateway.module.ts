@@ -9,6 +9,7 @@ import { WebscoketMngGateway } from './webscoket-mng/webscoket-mng.gateway';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { CryptoUtil } from './common/utils/crypto.util';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
   controllers: [AuthController],
   providers: [
     JwtStrategy,
+    CryptoUtil,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

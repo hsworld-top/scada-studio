@@ -23,6 +23,7 @@ import { Inject } from '@nestjs/common';
 import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import { LoginDto, RefreshTokenDto, SsoLoginDto } from '@app/shared-dto-lib';
 import { ResponseUtil } from '../common/utils/response.util';
+import { CryptoUtil } from '../common/utils/crypto.util';
 import { ApiResponse } from '../common/interfaces/api-response.interface';
 import { ERROR_MESSAGES } from '../common/constants/error-messages';
 
@@ -33,6 +34,7 @@ import { ERROR_MESSAGES } from '../common/constants/error-messages';
 export class AuthController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
+    private readonly cryptoUtil: CryptoUtil,
   ) {}
 
   /**
@@ -49,6 +51,19 @@ export class AuthController {
   ) {
     // 添加客户端IP到请求数据
     loginDto.ip = ip;
+
+    // 如果传入了keyId，则使用新的加密方式解密密码
+    if (loginDto.keyId && this.cryptoUtil.hasKeyId(loginDto.keyId)) {
+      try {
+        loginDto.password = this.cryptoUtil.decryptPassword(
+          loginDto.keyId,
+          loginDto.password,
+        );
+      } catch (error) {
+        throw new BadRequestException('密码解密失败，请重新获取公钥后重试');
+      }
+    }
+    // 如果没有keyId，保持原样（兼容旧版本客户端）
 
     const result = await firstValueFrom(
       this.authClient.send('auth.login', loginDto).pipe(
@@ -109,6 +124,34 @@ export class AuthController {
     }
 
     throw new InternalServerErrorException(ERROR_MESSAGES.SSO_LOGIN_FAILED);
+  }
+
+  /**
+   * 获取RSA公钥（供前端加密密码使用）
+   * @returns RSA公钥和密钥标识
+   */
+  @Get('public-key')
+  @HttpCode(HttpStatus.OK)
+  getPublicKey() {
+    try {
+      const keyInfo = this.cryptoUtil.generateKeyPair();
+      return ResponseUtil.success(
+        {
+          keyId: keyInfo.keyId,
+          publicKey: keyInfo.publicKey,
+          expiresIn: keyInfo.expiresIn,
+          algorithm: 'RSA-OAEP',
+          keySize: 2048,
+          hash: 'SHA-256',
+          usage: '前端密码加密专用，登录时需同时传递keyId和加密密码',
+        },
+        '公钥获取成功',
+      );
+    } catch (error) {
+      throw new InternalServerErrorException(
+        ERROR_MESSAGES.SERVICE_UNAVAILABLE,
+      );
+    }
   }
 
   /**

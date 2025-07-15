@@ -41,6 +41,13 @@ export class LoginDto {
   captchaText?: string;
 
   /**
+   * 密钥标识 (新的密码加密方式)
+   */
+  @IsOptional()
+  @IsString()
+  keyId?: string;
+
+  /**
    * (内部使用) 客户端IP地址，由API网关透传
    */
   ip?: string;

@@ -29,6 +29,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       '/api/auth/refresh',
       '/api/auth/captcha',
       '/api/auth/captcha-config',
+      '/api/auth/public-key',
       '/health',
       '/metrics',
     ];
