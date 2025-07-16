@@ -39,7 +39,7 @@ export class RoleService {
     });
     if (existingRole) {
       throw new ConflictException(
-        this.i18n.t('common.role_exists', { args: { name } }),
+        this.i18n.t('auth.role_exists', { args: { name } }),
       );
     }
 
@@ -88,7 +88,7 @@ export class RoleService {
   async findOne(id: number, tenantId: number): Promise<Role> {
     const role = await this.roleRepository.findOneBy({ id, tenantId });
     if (!role) {
-      throw new NotFoundException(this.i18n.t('common.role_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.role_not_found'));
     }
     return role;
   }
@@ -105,7 +105,7 @@ export class RoleService {
       });
       if (existingRole) {
         throw new ConflictException(
-          this.i18n.t('common.role_exists', { args: { name } }),
+          this.i18n.t('auth.role_exists', { args: { name } }),
         );
       }
       this.logger.warn(

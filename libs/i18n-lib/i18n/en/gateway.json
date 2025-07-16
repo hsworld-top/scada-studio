@@ -11,5 +11,12 @@
   "auth_service_timeout": "Authentication service timeout",
   "auth_service_unavailable": "Authentication service unavailable",
   "auth_service_dns_error": "Authentication service DNS resolution failed",
-  "service_error": "Service error"
+  "service_error": "Service error",
+  "tenant_create_failed": "Create tenant failed",
+  "tenant_update_failed": "Update tenant failed",
+  "tenant_delete_failed": "Delete tenant failed",
+  "tenant_query_failed": "Query tenant failed",
+  "tenant_list_failed": "Query tenant list failed",
+  "tenant_status_change_failed": "Change tenant status failed",
+  "invalid_tenant_id": "Invalid tenant ID"
 }

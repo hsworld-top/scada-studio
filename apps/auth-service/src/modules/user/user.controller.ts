@@ -14,13 +14,17 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PermissionsGuard } from '../../common/guards/permissions/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions/require-permissions.decorator';
 import { CurrentUserId } from '../../common/decorators/current-user-id.decorator';
+import { I18nService } from 'nestjs-i18n';
 
 /**
  * UserController 负责处理用户相关的微服务请求。
  */
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly i18n: I18nService,
+  ) {}
 
   // --- Admin-only Endpoints ---
   @UseGuards(PermissionsGuard)
@@ -30,8 +34,17 @@ export class UserController {
     @Payload(new ValidationPipe()) createUserDto: CreateUserDto,
     @CurrentUserId() operatorId: number,
   ) {
-    createUserDto.operatorId = createUserDto.operatorId || operatorId;
-    return this.userService.create(createUserDto);
+    try {
+      createUserDto.operatorId = createUserDto.operatorId || operatorId;
+      const result = await this.userService.create(createUserDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -41,7 +54,16 @@ export class UserController {
     @Payload(new ValidationPipe({ transform: true }))
     findUsersDto: FindUsersDto,
   ) {
-    return this.userService.findAll(findUsersDto);
+    try {
+      const result = await this.userService.findAll(findUsersDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -51,8 +73,17 @@ export class UserController {
     @Payload(new ValidationPipe()) updateUserDto: UpdateUserDto,
     @CurrentUserId() operatorId: number,
   ) {
-    updateUserDto.operatorId = updateUserDto.operatorId || operatorId;
-    return this.userService.update(updateUserDto);
+    try {
+      updateUserDto.operatorId = updateUserDto.operatorId || operatorId;
+      const result = await this.userService.update(updateUserDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -62,8 +93,17 @@ export class UserController {
     @Payload(new ValidationPipe()) setUserStatusDto: SetUserStatusDto,
     @CurrentUserId() operatorId: number,
   ) {
-    setUserStatusDto.operatorId = setUserStatusDto.operatorId || operatorId;
-    return this.userService.setStatus(setUserStatusDto);
+    try {
+      setUserStatusDto.operatorId = setUserStatusDto.operatorId || operatorId;
+      const result = await this.userService.setStatus(setUserStatusDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -79,11 +119,20 @@ export class UserController {
     },
     @CurrentUserId() operatorId: number,
   ) {
-    return this.userService.remove(
-      payload.userId,
-      payload.tenantId,
-      payload.operatorId || operatorId,
-    );
+    try {
+      const result = await this.userService.remove(
+        payload.userId,
+        payload.tenantId,
+        payload.operatorId || operatorId,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   // --- Self-service Endpoints (for logged-in users) ---
@@ -92,7 +141,19 @@ export class UserController {
   async getProfile(
     @Payload() payload: { currentUserId: number; tenantId: number },
   ) {
-    return this.userService.getProfile(payload.currentUserId, payload.tenantId);
+    try {
+      const result = await this.userService.getProfile(
+        payload.currentUserId,
+        payload.tenantId,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @MessagePattern('users.updateProfile')
@@ -100,8 +161,17 @@ export class UserController {
     @Payload(new ValidationPipe()) updateProfileDto: UpdateProfileDto,
     @CurrentUserId() operatorId: number,
   ) {
-    updateProfileDto.operatorId = updateProfileDto.operatorId || operatorId;
-    return this.userService.updateProfile(updateProfileDto);
+    try {
+      updateProfileDto.operatorId = updateProfileDto.operatorId || operatorId;
+      const result = await this.userService.updateProfile(updateProfileDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @MessagePattern('users.changePassword')
@@ -109,8 +179,17 @@ export class UserController {
     @Payload(new ValidationPipe()) changePasswordDto: ChangePasswordDto,
     @CurrentUserId() operatorId: number,
   ) {
-    changePasswordDto.operatorId = changePasswordDto.operatorId || operatorId;
-    return this.userService.changePassword(changePasswordDto);
+    try {
+      changePasswordDto.operatorId = changePasswordDto.operatorId || operatorId;
+      const result = await this.userService.changePassword(changePasswordDto);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @MessagePattern('users.setMultiSession')
@@ -119,18 +198,36 @@ export class UserController {
     payload: { userId: number; allowMultiSession: boolean },
     @CurrentUserId() operatorId: number,
   ) {
-    return this.userService.setMultiSession(
-      payload.userId,
-      payload.allowMultiSession,
-      operatorId,
-    );
+    try {
+      const result = await this.userService.setMultiSession(
+        payload.userId,
+        payload.allowMultiSession,
+        operatorId,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
   @RequirePermissions({ resource: 'user', action: 'manage_security_policy' })
   @MessagePattern('settings.getSecurityPolicy')
   async getSecurityPolicy(@Payload() payload: { tenantId: number }) {
-    return this.userService.getSecurityPolicy(payload.tenantId);
+    try {
+      const result = await this.userService.getSecurityPolicy(payload.tenantId);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -139,14 +236,37 @@ export class UserController {
   async updateSecurityPolicy(
     @Payload() payload: { tenantId: number; dto: SecurityPolicyDto },
   ) {
-    return this.userService.updateSecurityPolicy(payload.tenantId, payload.dto);
+    try {
+      const result = await this.userService.updateSecurityPolicy(
+        payload.tenantId,
+        payload.dto,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
   @RequirePermissions({ resource: 'user', action: 'manage_username_blacklist' })
   @MessagePattern('settings.listUsernameBlacklist')
   async listUsernameBlacklist(@Payload() payload: { tenantId: number }) {
-    return this.userService.listUsernameBlacklist(payload.tenantId);
+    try {
+      const result = await this.userService.listUsernameBlacklist(
+        payload.tenantId,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -155,7 +275,19 @@ export class UserController {
   async addUsernameBlacklist(
     @Payload() payload: { tenantId: number; dto: UsernameBlacklistDto },
   ) {
-    return this.userService.addUsernameBlacklist(payload.tenantId, payload.dto);
+    try {
+      const result = await this.userService.addUsernameBlacklist(
+        payload.tenantId,
+        payload.dto,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
   }
 
   @UseGuards(PermissionsGuard)
@@ -164,9 +296,92 @@ export class UserController {
   async removeUsernameBlacklist(
     @Payload() payload: { tenantId: number; dto: UsernameBlacklistDto },
   ) {
-    return this.userService.removeUsernameBlacklist(
-      payload.tenantId,
-      payload.dto,
-    );
+    try {
+      const result = await this.userService.removeUsernameBlacklist(
+        payload.tenantId,
+        payload.dto,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleUserError(error);
+    }
+  }
+
+  /**
+   * 统一处理用户相关的错误，返回标准格式
+   */
+  private handleUserError(error: any) {
+    const message = error?.message || '';
+
+    // 用户相关错误
+    if (message.includes('user_not_found') || message.includes('用户不存在')) {
+      return {
+        code: 404,
+        msg: this.i18n.t('auth.user_not_found'),
+        data: null,
+      };
+    }
+
+    if (
+      message.includes('user_already_exists') ||
+      message.includes('用户已存在')
+    ) {
+      return {
+        code: 409,
+        msg: this.i18n.t('auth.user_already_exists'),
+        data: null,
+      };
+    }
+
+    if (message.includes('invalid_password') || message.includes('密码无效')) {
+      return {
+        code: 400,
+        msg: this.i18n.t('auth.invalid_password'),
+        data: null,
+      };
+    }
+
+    if (
+      message.includes('cannot_delete_self') ||
+      message.includes('不能删除自己')
+    ) {
+      return {
+        code: 400,
+        msg: this.i18n.t('auth.cannot_delete_self'),
+        data: null,
+      };
+    }
+
+    // 权限相关错误
+    if (
+      message.includes('insufficient_permissions') ||
+      message.includes('权限不足')
+    ) {
+      return {
+        code: 403,
+        msg: this.i18n.t('auth.insufficient_permissions'),
+        data: null,
+      };
+    }
+
+    // 验证错误
+    if (message.includes('validation') || message.includes('验证')) {
+      return {
+        code: 400,
+        msg: message,
+        data: null,
+      };
+    }
+
+    // 默认错误
+    return {
+      code: 500,
+      msg: message || this.i18n.t('auth.service_unavailable'),
+      data: null,
+    };
   }
 }

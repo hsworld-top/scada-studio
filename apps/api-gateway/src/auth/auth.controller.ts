@@ -305,7 +305,7 @@ export class AuthController {
       );
 
       // 检查微服务返回的结果，直接返回auth-service的响应
-      if (result && typeof result === 'object' && 'code' in result) {
+      if (result && typeof result === 'object' && 'captchaId ' in result) {
         return result;
       }
 

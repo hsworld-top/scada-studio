@@ -11,5 +11,12 @@
   "auth_service_timeout": "认证服务超时",
   "auth_service_unavailable": "认证服务不可用",
   "auth_service_dns_error": "认证服务DNS解析失败",
-  "service_error": "服务错误"
+  "service_error": "服务错误",
+  "tenant_create_failed": "创建租户失败",
+  "tenant_update_failed": "更新租户失败",
+  "tenant_delete_failed": "删除租户失败",
+  "tenant_query_failed": "查询租户失败",
+  "tenant_list_failed": "查询租户列表失败",
+  "tenant_status_change_failed": "修改租户状态失败",
+  "invalid_tenant_id": "无效的租户ID"
 }

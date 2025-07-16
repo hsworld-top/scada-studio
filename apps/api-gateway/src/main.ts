@@ -25,7 +25,7 @@ async function bootstrap() {
   );
 
   // 启动 HTTP 网关服务
-  const port = Number(process.env.API_GATEWAY_PORT || 3001);
+  const port = Number(process.env.API_GATEWAY_PORT || 3000);
   await app.listen(port, '0.0.0.0');
 
   logger.log(`API Gateway is running on port ${port}`, 'Bootstrap');

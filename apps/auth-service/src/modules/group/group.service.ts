@@ -44,7 +44,7 @@ export class GroupService {
     const existingGroup = await this.groupRepository.findOneBy(query);
     if (existingGroup) {
       throw new ConflictException(
-        this.i18n.t('common.group_exists', { args: { name } }),
+        this.i18n.t('auth.group_exists', { args: { name } }),
       );
     }
 
@@ -118,7 +118,7 @@ export class GroupService {
   async findOne(id: number, tenantId: number): Promise<Group> {
     const group = await this.groupRepository.findOneBy({ id, tenantId });
     if (!group) {
-      throw new NotFoundException(this.i18n.t('common.group_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.group_not_found'));
     }
     return group;
   }
@@ -137,7 +137,7 @@ export class GroupService {
       } else {
         if (parentId === id) {
           throw new ConflictException(
-            this.i18n.t('common.group_cannot_be_own_parent'),
+            this.i18n.t('auth.group_cannot_be_own_parent'),
           );
         }
         const newParent = await this.findOne(parentId, tenantId);

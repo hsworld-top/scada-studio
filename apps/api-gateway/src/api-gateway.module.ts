@@ -6,6 +6,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { I18nLibModule } from '@app/i18n-lib';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { AuthController } from './auth/auth.controller';
+import { TenantController } from './auth/tenant.controller';
+import { UserController } from './auth/user.controller';
 import { WebscoketMngGateway } from './webscoket-mng/webscoket-mng.gateway';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -52,6 +54,14 @@ import { ConfigModule } from '@nestjs/config';
     }),
     ClientsModule.register([
       {
+        name: 'TENANT_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: process.env.TENANT_SERVICE_HOST || '127.0.0.1',
+          port: Number(process.env.TENANT_SERVICE_PORT || 3001),
+        },
+      },
+      {
         name: 'AUTH_SERVICE',
         transport: Transport.TCP,
         options: {
@@ -69,7 +79,7 @@ import { ConfigModule } from '@nestjs/config';
       },
     ]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, TenantController, UserController],
   providers: [
     JwtStrategy,
     CryptoUtil,

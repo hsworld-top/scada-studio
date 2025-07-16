@@ -35,7 +35,6 @@
     "casbin": "^5.38.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-
     "i18n": "^0.15.1",
     "i18next": "^25.2.1",
     "ioredis": "^5.6.1",

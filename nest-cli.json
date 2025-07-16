@@ -27,6 +27,24 @@
         "webpackConfigPath": "apps/auth-service/webpack.config.js"
       }
     },
+    "i18n-lib": {
+      "type": "library",
+      "root": "libs/i18n-lib",
+      "entryFile": "index",
+      "sourceRoot": "libs/i18n-lib/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/i18n-lib/tsconfig.lib.json"
+      }
+    },
+    "iam-service": {
+      "type": "application",
+      "root": "apps/iam-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/iam-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/iam-service/tsconfig.app.json"
+      }
+    },
     "logger-lib": {
       "type": "library",
       "root": "libs/logger-lib",
@@ -45,6 +63,15 @@
         "tsConfigPath": "libs/pg-lib/tsconfig.lib.json"
       }
     },
+    "platform-core": {
+      "type": "application",
+      "root": "apps/platform-core",
+      "entryFile": "main",
+      "sourceRoot": "apps/platform-core/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/platform-core/tsconfig.app.json"
+      }
+    },
     "project-studio": {
       "type": "application",
       "root": "apps/project-studio",
@@ -61,15 +88,6 @@
       "sourceRoot": "libs/redis-lib/src",
       "compilerOptions": {
         "tsConfigPath": "libs/redis-lib/tsconfig.lib.json"
-      }
-    },
-    "i18n-lib": {
-      "type": "library",
-      "root": "libs/i18n-lib",
-      "entryFile": "index",
-      "sourceRoot": "libs/i18n-lib/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/i18n-lib/tsconfig.lib.json"
       }
     },
     "shared-dto-lib": {

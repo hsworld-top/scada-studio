@@ -71,7 +71,10 @@ export class UserService implements OnModuleInit {
     );
   }
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(
+    createUserDto: CreateUserDto,
+    isSuperAdmin: boolean = false,
+  ): Promise<User> {
     const {
       username,
       password,
@@ -85,7 +88,7 @@ export class UserService implements OnModuleInit {
 
     const tenant = await this.tenantRepository.findOneBy({ id: tenantId });
     if (!tenant) {
-      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.tenant_not_found'));
     }
 
     const orConditions: Array<{
@@ -108,17 +111,17 @@ export class UserService implements OnModuleInit {
       if (existingUser) {
         if (existingUser.username === username) {
           throw new ConflictException(
-            this.i18n.t('common.user_exists', { args: { username } }),
+            this.i18n.t('auth.user_exists', { args: { username } }),
           );
         }
         if (email && existingUser.email === email) {
           throw new ConflictException(
-            this.i18n.t('common.email_exists', { args: { email } }),
+            this.i18n.t('auth.email_exists', { args: { email } }),
           );
         }
         if (phone && existingUser.phone === phone) {
           throw new ConflictException(
-            this.i18n.t('common.phone_exists', { args: { phone } }),
+            this.i18n.t('auth.phone_exists', { args: { phone } }),
           );
         }
       }
@@ -128,7 +131,7 @@ export class UserService implements OnModuleInit {
       where: { name: In(roleNames), tenantId },
     });
     if (roles.length !== roleNames.length) {
-      throw new NotFoundException(this.i18n.t('common.role_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.role_not_found'));
     }
 
     let groups: Group[] = [];
@@ -137,18 +140,18 @@ export class UserService implements OnModuleInit {
         where: { id: In(groupIds), tenantId },
       });
       if (groups.length !== groupIds.length) {
-        throw new NotFoundException(this.i18n.t('common.group_not_found'));
+        throw new NotFoundException(this.i18n.t('auth.group_not_found'));
       }
     }
 
     // 密码强度校验
     if (!this.isStrongPassword(password)) {
-      throw new BadRequestException(this.i18n.t('common.password_too_weak'));
+      throw new BadRequestException(this.i18n.t('auth.password_too_weak'));
     }
 
     // 用户名黑名单校验
     const policy = await this.getSecurityPolicy(tenantId);
-    if ((policy.usernameBlacklist || []).includes(username)) {
+    if ((policy.usernameBlacklist || []).includes(username) && !isSuperAdmin) {
       throw new BadRequestException('该用户名禁止注册');
     }
 
@@ -259,7 +262,7 @@ export class UserService implements OnModuleInit {
       relations: ['roles', 'groups'],
     });
     if (!user) {
-      throw new NotFoundException(this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.user_not_found'));
     }
 
     if (email) user.email = email;
@@ -272,7 +275,7 @@ export class UserService implements OnModuleInit {
         where: { name: In(roleNames), tenantId },
       });
       if (newRoles.length !== roleNames.length) {
-        throw new NotFoundException(this.i18n.t('common.role_not_found'));
+        throw new NotFoundException(this.i18n.t('auth.role_not_found'));
       }
       user.roles = newRoles;
       await this.casbinService
@@ -318,7 +321,7 @@ export class UserService implements OnModuleInit {
     );
 
     if (result.affected === 0) {
-      throw new NotFoundException(this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.user_not_found'));
     }
 
     // 自动审计
@@ -345,7 +348,7 @@ export class UserService implements OnModuleInit {
     });
 
     if (result.affected === 0) {
-      throw new NotFoundException(this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.user_not_found'));
     }
 
     await this.casbinService.getEnforcer().deleteUser(userId.toString());
@@ -381,7 +384,7 @@ export class UserService implements OnModuleInit {
       relations: ['roles', 'groups', 'tenant'],
     });
     if (!user) {
-      throw new NotFoundException(this.i18n.t('common.user_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.user_not_found'));
     }
     return user;
   }
@@ -411,7 +414,7 @@ export class UserService implements OnModuleInit {
       const existing = await this.userRepository.findOneBy({ email, tenantId });
       if (existing) {
         throw new ConflictException(
-          this.i18n.t('common.email_exists', { args: { email } }),
+          this.i18n.t('auth.email_exists', { args: { email } }),
         );
       }
       user.email = email;
@@ -421,7 +424,7 @@ export class UserService implements OnModuleInit {
       const existing = await this.userRepository.findOneBy({ phone, tenantId });
       if (existing) {
         throw new ConflictException(
-          this.i18n.t('common.phone_exists', { args: { phone } }),
+          this.i18n.t('auth.phone_exists', { args: { phone } }),
         );
       }
       user.phone = phone;
@@ -457,13 +460,13 @@ export class UserService implements OnModuleInit {
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       throw new UnauthorizedException(
-        this.i18n.t('common.incorrect_old_password'),
+        this.i18n.t('auth.incorrect_old_password'),
       );
     }
 
     // 密码强度校验
     if (!this.isStrongPassword(newPassword)) {
-      throw new BadRequestException(this.i18n.t('common.password_too_weak'));
+      throw new BadRequestException(this.i18n.t('auth.password_too_weak'));
     }
 
     user.password = newPassword;
@@ -494,7 +497,7 @@ export class UserService implements OnModuleInit {
       this.logger.error(
         `SSO failed: Tenant with slug '${tenantSlug}' not found.`,
       );
-      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.tenant_not_found'));
     }
 
     const user = await this.userRepository.findOne({
@@ -504,7 +507,7 @@ export class UserService implements OnModuleInit {
 
     if (user) {
       if (user.status !== UserStatus.ACTIVE) {
-        throw new UnauthorizedException(this.i18n.t('common.user_inactive'));
+        throw new UnauthorizedException(this.i18n.t('auth.user_inactive'));
       }
       return user;
     }
@@ -523,7 +526,7 @@ export class UserService implements OnModuleInit {
         `SSO user creation failed: Default role '${defaultRoleName}' not found in tenant ${tenant.id}.`,
       );
       throw new InternalServerErrorException(
-        this.i18n.t('common.default_role_not_configured'),
+        this.i18n.t('auth.default_role_not_configured'),
       );
     }
 
@@ -564,7 +567,7 @@ export class UserService implements OnModuleInit {
   async initTenantData(tenant: Tenant) {
     const tenantId = tenant.id;
     const tenantIdStr = tenant.id.toString();
-    const rolesToSeed = ['super-admin', 'developer'];
+    const rolesToSeed = ['super-admin'];
     const existingRolesCount = await this.roleRepository.count({
       where: { tenantId },
     });
@@ -580,27 +583,10 @@ export class UserService implements OnModuleInit {
     }
     const enforcer = this.casbinService.getEnforcer();
     const initialPolicies = [
-      ['super-admin', tenantIdStr, 'all', 'manage'],
-      ['super-admin', tenantIdStr, 'user', 'create'],
-      ['super-admin', tenantIdStr, 'user', 'read'],
-      ['super-admin', tenantIdStr, 'user', 'update'],
-      ['super-admin', tenantIdStr, 'user', 'delete'],
-      ['super-admin', tenantIdStr, 'user', 'manage_status'],
-      ['super-admin', tenantIdStr, 'role', 'create'],
-      ['super-admin', tenantIdStr, 'role', 'read'],
-      ['super-admin', tenantIdStr, 'role', 'update'],
-      ['super-admin', tenantIdStr, 'role', 'delete'],
-      ['super-admin', tenantIdStr, 'group', 'create'],
-      ['super-admin', tenantIdStr, 'group', 'read'],
-      ['super-admin', tenantIdStr, 'group', 'update'],
-      ['super-admin', tenantIdStr, 'group', 'delete'],
-      ['super-admin', tenantIdStr, 'permission', 'manage'],
       ['super-admin', tenantIdStr, 'tenant', 'create'],
       ['super-admin', tenantIdStr, 'tenant', 'update'],
       ['super-admin', tenantIdStr, 'tenant', 'delete'],
       ['super-admin', tenantIdStr, 'tenant', 'read'],
-      ['developer', tenantIdStr, 'workbench', 'access'],
-      ['developer', tenantIdStr, 'project', 'manage'],
     ];
     for (const p of initialPolicies) {
       if (!(await enforcer.hasPolicy(...p))) {
@@ -612,12 +598,15 @@ export class UserService implements OnModuleInit {
     });
     if (!adminExists) {
       this.logger.log(`Seeding super admin for tenant ${tenantId}...`);
-      await this.create({
-        username: 'admin',
-        password: process.env.ADMIN_PASSWORD || 'admin123',
-        roleNames: ['super-admin'],
-        tenantId,
-      });
+      await this.create(
+        {
+          username: 'admin',
+          password: process.env.ADMIN_PASSWORD || 'admin123',
+          roleNames: ['super-admin'],
+          tenantId,
+        },
+        true,
+      );
       this.logger.log('Super admin seeded.');
     }
     // 初始化安全策略

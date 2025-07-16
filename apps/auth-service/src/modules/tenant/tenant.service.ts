@@ -39,7 +39,7 @@ export class TenantService {
       where: [{ name }, { slug }],
     });
     if (exist) {
-      throw new BadRequestException(this.i18n.t('common.tenant_exists'));
+      throw new BadRequestException(this.i18n.t('auth.tenant_exists'));
     }
     const tenant = this.tenantRepository.create({ name, slug });
     const newTenant = await this.tenantRepository.save(tenant);
@@ -70,7 +70,7 @@ export class TenantService {
   ): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
     if (!tenant)
-      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.tenant_not_found'));
     tenant.name = name;
     tenant.slug = slug;
     await this.auditLogService.audit({
@@ -91,7 +91,7 @@ export class TenantService {
   async deleteTenant(id: number, operatorId?: number): Promise<void> {
     const result = await this.tenantRepository.delete(id);
     if (result.affected === 0)
-      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.tenant_not_found'));
     await this.auditLogService.audit({
       userId: operatorId,
       action: 'delete',
@@ -108,7 +108,7 @@ export class TenantService {
   async findTenantById(id: number): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
     if (!tenant)
-      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.tenant_not_found'));
     return tenant;
   }
 
@@ -131,7 +131,7 @@ export class TenantService {
   ): Promise<Tenant> {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
     if (!tenant)
-      throw new NotFoundException(this.i18n.t('common.tenant_not_found'));
+      throw new NotFoundException(this.i18n.t('auth.tenant_not_found'));
     tenant.status = status;
     await this.auditLogService.audit({
       userId: operatorId,

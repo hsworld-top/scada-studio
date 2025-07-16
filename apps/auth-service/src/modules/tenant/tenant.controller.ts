@@ -10,6 +10,7 @@ import {
   FindTenantByIdDto,
   ChangeTenantStatusDto,
 } from '@app/shared-dto-lib';
+import { I18nService } from 'nestjs-i18n';
 
 /**
  * TenantController 负责处理租户相关的微服务消息接口。
@@ -17,7 +18,10 @@ import {
 @Controller('tenants')
 @UseGuards(PermissionsGuard)
 export class TenantController {
-  constructor(private readonly tenantService: TenantService) {}
+  constructor(
+    private readonly tenantService: TenantService,
+    private readonly i18n: I18nService,
+  ) {}
 
   /**
    * 创建租户
@@ -25,8 +29,20 @@ export class TenantController {
    */
   @MessagePattern('tenant.create')
   @RequirePermissions({ resource: 'tenant', action: 'create' })
-  create(@Payload(new ValidationPipe()) payload: CreateTenantDto) {
-    return this.tenantService.createTenant(payload.name, payload.slug);
+  async create(@Payload(new ValidationPipe()) payload: CreateTenantDto) {
+    try {
+      const result = await this.tenantService.createTenant(
+        payload.name,
+        payload.slug,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleTenantError(error);
+    }
   }
 
   /**
@@ -35,12 +51,21 @@ export class TenantController {
    */
   @MessagePattern('tenant.update')
   @RequirePermissions({ resource: 'tenant', action: 'update' })
-  update(@Payload(new ValidationPipe()) payload: UpdateTenantDto) {
-    return this.tenantService.updateTenant(
-      payload.id,
-      payload.name,
-      payload.slug,
-    );
+  async update(@Payload(new ValidationPipe()) payload: UpdateTenantDto) {
+    try {
+      const result = await this.tenantService.updateTenant(
+        payload.id,
+        payload.name,
+        payload.slug,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleTenantError(error);
+    }
   }
 
   /**
@@ -50,8 +75,16 @@ export class TenantController {
   @MessagePattern('tenant.delete')
   @RequirePermissions({ resource: 'tenant', action: 'delete' })
   async delete(@Payload(new ValidationPipe()) payload: DeleteTenantDto) {
-    await this.tenantService.deleteTenant(payload.id);
-    return { success: true };
+    try {
+      await this.tenantService.deleteTenant(payload.id);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: { success: true },
+      };
+    } catch (error) {
+      return this.handleTenantError(error);
+    }
   }
 
   /**
@@ -60,8 +93,17 @@ export class TenantController {
    */
   @MessagePattern('tenant.findById')
   @RequirePermissions({ resource: 'tenant', action: 'read' })
-  findById(@Payload(new ValidationPipe()) payload: FindTenantByIdDto) {
-    return this.tenantService.findTenantById(payload.id);
+  async findById(@Payload(new ValidationPipe()) payload: FindTenantByIdDto) {
+    try {
+      const result = await this.tenantService.findTenantById(payload.id);
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleTenantError(error);
+    }
   }
 
   /**
@@ -69,8 +111,17 @@ export class TenantController {
    */
   @MessagePattern('tenant.findAll')
   @RequirePermissions({ resource: 'tenant', action: 'read' })
-  findAll() {
-    return this.tenantService.findAllTenants();
+  async findAll() {
+    try {
+      const result = await this.tenantService.findAllTenants();
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleTenantError(error);
+    }
   }
 
   /**
@@ -79,7 +130,98 @@ export class TenantController {
    */
   @MessagePattern('tenant.changeStatus')
   @RequirePermissions({ resource: 'tenant', action: 'update' })
-  changeStatus(@Payload(new ValidationPipe()) payload: ChangeTenantStatusDto) {
-    return this.tenantService.changeStatus(payload.id, payload.status);
+  async changeStatus(
+    @Payload(new ValidationPipe()) payload: ChangeTenantStatusDto,
+  ) {
+    try {
+      const result = await this.tenantService.changeStatus(
+        payload.id,
+        payload.status,
+      );
+      return {
+        code: 0,
+        msg: this.i18n.t('auth.success'),
+        data: result,
+      };
+    } catch (error) {
+      return this.handleTenantError(error);
+    }
+  }
+
+  /**
+   * 统一处理租户相关的错误，返回标准格式
+   */
+  private handleTenantError(error: any) {
+    const message = error?.message || '';
+
+    // 租户相关错误
+    if (
+      message.includes('tenant_not_found') ||
+      message.includes('租户不存在')
+    ) {
+      return {
+        code: 404,
+        msg: this.i18n.t('auth.tenant_not_found'),
+        data: null,
+      };
+    }
+
+    if (
+      message.includes('tenant_already_exists') ||
+      message.includes('租户已存在')
+    ) {
+      return {
+        code: 409,
+        msg: this.i18n.t('auth.tenant_already_exists'),
+        data: null,
+      };
+    }
+
+    if (
+      message.includes('cannot_delete_tenant') ||
+      message.includes('不能删除租户')
+    ) {
+      return {
+        code: 400,
+        msg: this.i18n.t('auth.cannot_delete_tenant'),
+        data: null,
+      };
+    }
+
+    if (message.includes('tenant_inactive') || message.includes('租户已停用')) {
+      return {
+        code: 400,
+        msg: this.i18n.t('auth.tenant_inactive'),
+        data: null,
+      };
+    }
+
+    // 权限相关错误
+    if (
+      message.includes('insufficient_permissions') ||
+      message.includes('权限不足')
+    ) {
+      return {
+        code: 403,
+        msg: this.i18n.t('auth.insufficient_permissions'),
+        data: null,
+      };
+    }
+
+    // 验证错误
+    if (message.includes('validation') || message.includes('验证')) {
+      return {
+        code: 400,
+        msg: message,
+        data: null,
+      };
+    }
+
+    // 默认错误
+    return {
+      code: 500,
+      msg: message || this.i18n.t('auth.service_unavailable'),
+      data: null,
+    };
   }
 }
