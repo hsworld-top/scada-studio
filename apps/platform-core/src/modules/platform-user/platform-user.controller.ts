@@ -1,19 +1,10 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { PlatformUserService } from './platform-user.service';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
 import { ResponseCode } from '../common/api-response.interface';
 import { I18nService } from 'nestjs-i18n';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
 /**
  * 平台超级管理员控制器
@@ -37,16 +28,22 @@ export class PlatformAdminController {
    * @param dto 创建数据（用户名、密码）
    * @returns 创建结果，含国际化消息
    */
-  @Post()
-  async create(@Req() req, @Body() dto) {
+  @MessagePattern('createAdmin')
+  async create(
+    @Payload()
+    payload: {
+      dto: { username: string; password: string };
+      user: { username: string };
+    },
+  ) {
     const result = await this.userService.createAdmin(
-      dto.username,
-      dto.password,
+      payload.dto.username,
+      payload.dto.password,
     );
     await this.auditTenantLogService.audit({
       operation: 'create_admin',
-      superAdminUsername: req.user.username,
-      operatorContext: JSON.stringify(dto),
+      superAdminUsername: payload.user.username,
+      operatorContext: JSON.stringify(payload.dto),
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -61,12 +58,21 @@ export class PlatformAdminController {
    * @param id 目标用户ID
    * @returns 删除结果，含国际化消息
    */
-  @Delete(':id')
-  async delete(@Req() req, @Param('id') id: string) {
-    const result = await this.userService.deleteAdmin(id, req.user.id);
+  @MessagePattern('deleteAdmin')
+  async delete(
+    @Payload()
+    payload: {
+      id: string;
+      user: { username: string; id: number };
+    },
+  ) {
+    const result = await this.userService.deleteAdmin(
+      payload.id,
+      payload.user.id.toString(),
+    );
     await this.auditTenantLogService.audit({
       operation: 'delete_admin',
-      superAdminUsername: req.user.username,
+      superAdminUsername: payload.user.username,
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -80,12 +86,12 @@ export class PlatformAdminController {
    * @param req 请求对象，包含当前用户信息
    * @returns 用户列表，含国际化消息
    */
-  @Get()
-  async list(@Req() req) {
+  @MessagePattern('listAdmins')
+  async list(@Payload() payload: { user: { username: string } }) {
     const result = await this.userService.listAdmins();
     await this.auditTenantLogService.audit({
       operation: 'list_admins',
-      superAdminUsername: req.user.username,
+      superAdminUsername: payload.user.username,
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -100,12 +106,18 @@ export class PlatformAdminController {
    * @param id 用户ID
    * @returns 用户信息，含国际化消息
    */
-  @Get(':id')
-  async get(@Req() req, @Param('id') id: string) {
-    const result = await this.userService.getAdminById(id);
+  @MessagePattern('getAdmin')
+  async get(
+    @Payload()
+    payload: {
+      id: string;
+      user: { username: string; id: number };
+    },
+  ) {
+    const result = await this.userService.getAdminById(payload.id);
     await this.auditTenantLogService.audit({
       operation: 'get_admin',
-      superAdminUsername: req.user.username,
+      superAdminUsername: payload.user.username,
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -121,13 +133,20 @@ export class PlatformAdminController {
    * @param dto 更新数据
    * @returns 更新结果，含国际化消息
    */
-  @Patch(':id')
-  async update(@Req() req, @Param('id') id: string, @Body() dto) {
-    const result = await this.userService.updateAdmin(id, dto);
+  @MessagePattern('updateAdmin')
+  async update(
+    @Payload()
+    payload: {
+      id: string;
+      dto: any;
+      user: { username: string };
+    },
+  ) {
+    const result = await this.userService.updateAdmin(payload.id, payload.dto);
     await this.auditTenantLogService.audit({
       operation: 'update_admin',
-      superAdminUsername: req.user.username,
-      operatorContext: JSON.stringify(dto),
+      superAdminUsername: payload.user.username,
+      operatorContext: JSON.stringify(payload.dto),
     });
     return {
       code: ResponseCode.SUCCESS,

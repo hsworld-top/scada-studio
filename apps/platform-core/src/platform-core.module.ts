@@ -10,6 +10,7 @@ import { PlatformAuthModule } from './modules/platform-auth/platform-auth.module
 import { JwtModule } from '@nestjs/jwt';
 import { PlatformSessionGuard } from './guards/platform-session.guard';
 import { SharedDatabaseModule } from './modules/database/database.module';
+import { GlobalExceptionFilter } from './modules/common/global-exception.filter';
 /**
  * 平台核心模块
  * 负责平台服务的主入口，聚合各功能模块并进行全局配置
@@ -50,6 +51,6 @@ import { SharedDatabaseModule } from './modules/database/database.module';
     }),
   ],
   controllers: [],
-  providers: [PlatformSessionGuard],
+  providers: [PlatformSessionGuard, GlobalExceptionFilter],
 })
 export class PlatformCoreModule {}

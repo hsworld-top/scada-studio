@@ -27,6 +27,15 @@
         "webpackConfigPath": "apps/auth-service/webpack.config.js"
       }
     },
+    "gateway": {
+      "type": "application",
+      "root": "apps/gateway",
+      "entryFile": "main",
+      "sourceRoot": "apps/gateway/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/gateway/tsconfig.app.json"
+      }
+    },
     "i18n-lib": {
       "type": "library",
       "root": "libs/i18n-lib",

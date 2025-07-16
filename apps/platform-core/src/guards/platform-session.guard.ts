@@ -26,10 +26,9 @@ export class PlatformSessionGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest();
+    const data = context.switchToRpc().getData();
 
-    const authHeader = req.headers.authorization || '';
-    const token = authHeader.replace('Bearer ', '');
+    const token = data.token || '';
 
     if (!token) throw new UnauthorizedException('缺少 Token');
 
@@ -46,7 +45,7 @@ export class PlatformSessionGuard implements CanActivate {
       throw new UnauthorizedException('该账号已在其他设备登录');
     }
 
-    req.user = user;
+    data.user = user;
 
     return true;
   }

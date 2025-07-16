@@ -1,26 +1,18 @@
-import {
-  Controller,
-  Post,
-  UseGuards,
-  Body,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Req,
-} from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { CreateTenantDto, UpdateTenantDto } from '@app/shared-dto-lib';
 import { I18nService } from 'nestjs-i18n';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
 import { ResponseCode } from '../common/api-response.interface';
 import { TenantService } from './platform-tenant.service';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { ValidationPipe } from '@nestjs/common';
 
 /**
  * 租户管理控制器
  * 提供租户的增删查改接口，并记录操作审计日志
  */
-@Controller('tenants')
+@Controller('platform/tenants')
 @UseGuards(PlatformSessionGuard)
 export class TenantController {
   /**
@@ -38,13 +30,19 @@ export class TenantController {
    * @param payload 创建数据
    * @returns 创建结果，含国际化消息
    */
-  @Post()
-  async create(@Req() req, @Body() payload: CreateTenantDto) {
-    const result = await this.tenantService.createTenant(payload);
+  @MessagePattern('createTenant')
+  async create(
+    @Payload(new ValidationPipe())
+    payload: {
+      dto: CreateTenantDto;
+      user: { username: string };
+    },
+  ) {
+    const result = await this.tenantService.createTenant(payload.dto);
     await this.auditTenantLogService.audit({
       operation: 'create_tenant',
-      superAdminUsername: req.user.username,
-      operatorContext: JSON.stringify(payload),
+      superAdminUsername: payload.user.username,
+      operatorContext: JSON.stringify(payload.dto),
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -59,12 +57,18 @@ export class TenantController {
    * @param id 租户ID
    * @returns 删除结果，含国际化消息
    */
-  @Delete(':id')
-  async delete(@Req() req, @Param('id') id: number) {
-    const result = await this.tenantService.deleteTenant(id);
+  @MessagePattern('deleteTenant')
+  async delete(
+    @Payload()
+    payload: {
+      id: number;
+      user: { username: string };
+    },
+  ) {
+    const result = await this.tenantService.deleteTenant(payload.id);
     await this.auditTenantLogService.audit({
       operation: 'delete_tenant',
-      superAdminUsername: req.user.username,
+      superAdminUsername: payload.user.username,
       operatorContext: JSON.stringify(result),
     });
     return {
@@ -79,12 +83,12 @@ export class TenantController {
    * @param req 请求对象，包含当前用户信息
    * @returns 租户列表，含国际化消息
    */
-  @Get()
-  async list(@Req() req) {
+  @MessagePattern('listTenants')
+  async list(@Payload() payload: { user: { username: string } }) {
     const result = await this.tenantService.listTenants();
     await this.auditTenantLogService.audit({
       operation: 'list_tenants',
-      superAdminUsername: req.user.username,
+      superAdminUsername: payload.user.username,
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -100,17 +104,23 @@ export class TenantController {
    * @param payload 更新数据
    * @returns 更新结果，含国际化消息
    */
-  @Patch(':id')
+  @MessagePattern('updateTenant')
   async update(
-    @Req() req,
-    @Param('id') id: number,
-    @Body() payload: UpdateTenantDto,
+    @Payload()
+    payload: {
+      id: number;
+      dto: UpdateTenantDto;
+      user: { username: string };
+    },
   ) {
-    const result = await this.tenantService.updateTenant(id, payload);
+    const result = await this.tenantService.updateTenant(
+      payload.id,
+      payload.dto,
+    );
     await this.auditTenantLogService.audit({
       operation: 'update_tenant',
-      superAdminUsername: req.user.username,
-      operatorContext: JSON.stringify(payload),
+      superAdminUsername: payload.user.username,
+      operatorContext: JSON.stringify(payload.dto),
     });
     return {
       code: ResponseCode.SUCCESS,

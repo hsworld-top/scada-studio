@@ -1,10 +1,11 @@
-import { Controller, Post, Body, Ip, UseGuards } from '@nestjs/common';
-import { Req } from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { PlatformAuthService } from './platform-auth.service';
 import { ResponseCode } from '../common/api-response.interface';
 import { I18nService } from 'nestjs-i18n';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { ValidationPipe } from '@nestjs/common';
 
 /**
  * 平台认证控制器
@@ -21,16 +22,20 @@ export class PlatformAuthController {
     private readonly auditTenantLogService: AuditTenantLogService,
   ) {}
 
-  @Post('login')
+  @MessagePattern('login')
   async login(
-    @Body() body: { username: string; password: string },
-    @Ip() ip: string,
+    @Payload(new ValidationPipe())
+    body: {
+      username: string;
+      password: string;
+      ip: string;
+    },
   ) {
     const result = await this.authService.login(body.username, body.password);
     await this.auditTenantLogService.audit({
       operation: 'login',
       superAdminUsername: body.username,
-      operatorIp: ip,
+      operatorIp: body.ip,
     });
     return {
       code: ResponseCode.SUCCESS,
@@ -39,14 +44,23 @@ export class PlatformAuthController {
     };
   }
 
-  @Post('logout')
+  @MessagePattern('logout')
   @UseGuards(PlatformSessionGuard)
-  async logout(@Req() req, @Ip() ip: string) {
-    await this.authService.logout(req.user.id);
+  async logout(
+    @Payload(new ValidationPipe())
+    body: {
+      ip: string;
+      user: {
+        id: number;
+        username: string;
+      };
+    },
+  ) {
+    await this.authService.logout(body.user.id.toString());
     await this.auditTenantLogService.audit({
       operation: 'logout',
-      superAdminUsername: req.user.username,
-      operatorIp: ip,
+      superAdminUsername: body.user.username,
+      operatorIp: body.ip,
     });
     return {
       code: ResponseCode.SUCCESS,
