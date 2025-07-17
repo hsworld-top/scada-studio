@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { nanoid } from 'nanoid';
 import { UserStatus } from '@app/shared-dto-lib';
-
+import * as bcrypt from 'bcrypt';
 /**
  * 平台认证服务
  * 负责平台用户的登录、认证、token 相关逻辑
@@ -66,6 +66,15 @@ export class PlatformAuthService {
 
   verifyPassword(input: string, hash: string) {
     // 简单示例，生产请用 bcrypt
-    return input === hash;
+    if (!input || !hash) {
+      return false;
+    }
+    // 使用 bcrypt 验证密码
+    try {
+      return bcrypt.compareSync(input, hash);
+    } catch (error) {
+      console.error('Password verification failed:', error);
+      return false;
+    }
   }
 }

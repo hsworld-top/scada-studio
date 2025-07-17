@@ -1,6 +1,5 @@
-import { Controller, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { CreateTenantDto, UpdateTenantDto } from '@app/shared-dto-lib';
-import { I18nService } from 'nestjs-i18n';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
 import { ResponseCode } from '../common/api-response.interface';
 import { TenantService } from './platform-tenant.service';
@@ -12,7 +11,6 @@ import { ValidationPipe } from '@nestjs/common';
  * 租户管理控制器
  * 提供租户的增删查改接口，并记录操作审计日志
  */
-@Controller('platform/tenants')
 @UseGuards(PlatformSessionGuard)
 export class TenantController {
   /**
@@ -20,7 +18,6 @@ export class TenantController {
    */
   constructor(
     private readonly tenantService: TenantService,
-    private readonly i18n: I18nService,
     private readonly auditTenantLogService: AuditTenantLogService,
   ) {}
 
@@ -33,20 +30,20 @@ export class TenantController {
   @MessagePattern('createTenant')
   async create(
     @Payload(new ValidationPipe())
-    payload: {
-      dto: CreateTenantDto;
-      user: { username: string };
-    },
+    payload: CreateTenantDto & { user: { username: string } },
   ) {
-    const result = await this.tenantService.createTenant(payload.dto);
+    const result = await this.tenantService.createTenant(
+      payload.name,
+      payload.slug,
+    );
     await this.auditTenantLogService.audit({
       operation: 'create_tenant',
       superAdminUsername: payload.user.username,
-      operatorContext: JSON.stringify(payload.dto),
+      operatorContext: JSON.stringify(payload),
     });
     return {
       code: ResponseCode.SUCCESS,
-      msg: this.i18n.t('platform.tenant.create_success'),
+      msg: 'platform.tenant.create_success',
       data: result,
     };
   }
@@ -59,7 +56,7 @@ export class TenantController {
    */
   @MessagePattern('deleteTenant')
   async delete(
-    @Payload()
+    @Payload(new ValidationPipe())
     payload: {
       id: number;
       user: { username: string };
@@ -73,7 +70,7 @@ export class TenantController {
     });
     return {
       code: ResponseCode.SUCCESS,
-      msg: this.i18n.t('platform.tenant.delete_success'),
+      msg: 'platform.tenant.delete_success',
       data: result,
     };
   }
@@ -92,11 +89,30 @@ export class TenantController {
     });
     return {
       code: ResponseCode.SUCCESS,
-      msg: this.i18n.t('platform.tenant.list_success'),
+      msg: 'platform.tenant.list_success',
       data: result,
     };
   }
-
+  /**
+   * 获取租户信息
+   * @param req 请求对象，包含当前用户信息
+   * @param id 租户ID
+   * @returns 租户信息，含国际化消息
+   */
+  @MessagePattern('getTenant')
+  async get(@Payload() payload: { id: number; user: { username: string } }) {
+    const result = await this.tenantService.getTenant(payload.id);
+    await this.auditTenantLogService.audit({
+      operation: 'get_tenant',
+      superAdminUsername: payload.user.username,
+      operatorContext: JSON.stringify(payload),
+    });
+    return {
+      code: ResponseCode.SUCCESS,
+      msg: 'platform.tenant.get_success',
+      data: result,
+    };
+  }
   /**
    * 更新租户信息
    * @param req 请求对象，包含当前用户信息
@@ -106,25 +122,23 @@ export class TenantController {
    */
   @MessagePattern('updateTenant')
   async update(
-    @Payload()
-    payload: {
-      id: number;
-      dto: UpdateTenantDto;
-      user: { username: string };
-    },
+    @Payload(new ValidationPipe())
+    payload: UpdateTenantDto & { user: { username: string }; id: number },
   ) {
     const result = await this.tenantService.updateTenant(
       payload.id,
-      payload.dto,
+      payload.name,
+      payload.slug,
+      payload.status,
     );
     await this.auditTenantLogService.audit({
       operation: 'update_tenant',
       superAdminUsername: payload.user.username,
-      operatorContext: JSON.stringify(payload.dto),
+      operatorContext: JSON.stringify(payload),
     });
     return {
       code: ResponseCode.SUCCESS,
-      msg: this.i18n.t('platform.tenant.update_success'),
+      msg: 'platform.tenant.update_success',
       data: result,
     };
   }

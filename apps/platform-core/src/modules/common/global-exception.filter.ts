@@ -1,7 +1,5 @@
-import { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
-import { Response } from 'express';
-import { ApiResponse, ResponseCode } from './api-response.interface';
-import { I18nService } from 'nestjs-i18n';
+import { ExceptionFilter } from '@nestjs/common';
+import { ApiResponse, ResponseCode, ErrorCode } from './api-response.interface';
 
 /**
  * 全局异常过滤器
@@ -12,23 +10,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    * 构造函数，注入国际化服务
    * @param i18n 国际化服务实例
    */
-  constructor(private readonly i18n: I18nService) {}
+  constructor() {}
 
-  catch(exception: any, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-
-    const status = exception.getStatus();
-    const message = this.i18n.t(exception.message);
+  catch(exception: any) {
+    console.log(exception);
     const code =
-      exception.getResponse()['code'] || ResponseCode.INTERNAL_SERVER_ERROR;
+      ErrorCode[exception.message] || ResponseCode.INTERNAL_SERVER_ERROR;
 
     const responseData: ApiResponse = {
       code,
-      msg: message as string,
+      msg: exception.message,
       data: null,
     };
-
-    response.status(status).json(responseData);
+    return responseData;
   }
 }

@@ -44,19 +44,17 @@ export class TenantService implements OnModuleInit {
    * @param param0 包含 name 和 slug
    * @returns 创建的租户实体
    */
-  async createTenant({ name, slug }) {
+  async createTenant(name: string, slug: string) {
+    if (await this.tenantRepository.findOne({ where: { slug } })) {
+      throw new Error('tenant_already_exists');
+    }
+    if (await this.tenantRepository.findOne({ where: { name } })) {
+      throw new Error('tenant_already_exists');
+    }
     const tenant = await this.tenantRepository.save({
       name,
       slug,
       status: TenantStatus.ACTIVE,
-    });
-
-    // 自动创建初始管理员账号（用户名、密码从环境变量读取）
-    await this.userRepository.save({
-      username: process.env.SUPER_ADMIN_USERNAME,
-      passwordHash: process.env.SUPER_ADMIN_PASSWORD,
-      status: UserStatus.ACTIVE,
-      currentSessionId: '',
     });
 
     return tenant;
@@ -94,13 +92,43 @@ export class TenantService implements OnModuleInit {
   /**
    * 更新租户信息
    * @param id 租户ID
-   * @param payload 更新数据
+   * @param name 租户名称
+   * @param slug 租户标识
+   * @param status 租户状态
    * @returns 更新结果
    */
-  async updateTenant(id: number, payload: UpdateTenantDto) {
-    return this.tenantRepository.update(id, {
-      name: payload.name,
-      slug: payload.slug,
-    });
+  async updateTenant(
+    id: number,
+    name: string,
+    slug: string,
+    status: TenantStatus,
+  ) {
+    const tenant = await this.tenantRepository.findOne({ where: { id } });
+    if (!tenant) {
+      throw new Error('tenant_not_found');
+    }
+    if (name) {
+      tenant.name = name;
+    }
+    if (slug) {
+      tenant.slug = slug;
+    }
+    if (status) {
+      tenant.status = status;
+    }
+    return this.tenantRepository.save(tenant);
+  }
+  /**
+   * 获取租户信息
+   * @param id 租户ID
+   * @returns 租户信息
+   * @throws tenant_not_found 未找到租户
+   */
+  async getTenant(id: number) {
+    const tenant = await this.tenantRepository.findOne({ where: { id } });
+    if (!tenant) {
+      throw new Error('tenant_not_found');
+    }
+    return tenant;
   }
 }

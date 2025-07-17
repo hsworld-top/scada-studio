@@ -32,6 +32,11 @@ export class PlatformUserService implements OnModuleInit {
     if (!this.isStrongPassword(password)) {
       throw new Error('password_not_strong');
     }
+    // 检查是否已存在同名用户
+    const existingUser = await this.userRepo.findOne({ where: { username } });
+    if (existingUser) {
+      throw new Error('username_already_exists');
+    }
     // 使用 bcrypt 对密码进行加密存储
     const passwordHash = await bcrypt.hash(password, 10);
     const user = this.userRepo.create({ username, passwordHash });
@@ -43,18 +48,18 @@ export class PlatformUserService implements OnModuleInit {
    * @param id 目标用户ID
    * @param currentUserId 当前操作用户ID
    * @returns 删除结果
-   * @throws admin_not_found 未找到用户
+   * @throws user_not_found 未找到用户
    * @throws cannot_delete_self 不能删除自己
    */
   async deleteAdmin(id: string, currentUserId: string) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) {
-      throw new Error('admin_not_found');
+      throw new Error('user_not_found');
     }
     if (user.id === currentUserId) {
       throw new Error('cannot_delete_self');
     }
-    return this.userRepo.delete(id);
+    this.userRepo.delete(id);
   }
 
   /**
@@ -66,22 +71,17 @@ export class PlatformUserService implements OnModuleInit {
   }
 
   /**
-   * 根据ID查询超级管理员账号
-   * @param id 用户ID
-   * @returns 用户实体或 null
-   */
-  async getAdminById(id: string) {
-    return this.userRepo.findOne({ where: { id } });
-  }
-
-  /**
    * 更新超级管理员账号信息
    * @param id 用户ID
    * @param dto 更新数据
    * @returns 更新结果
    */
-  async updateAdmin(id: string, dto: any) {
-    return this.userRepo.update(id, dto);
+  async changeAdminPassword(id: string, password: string) {
+    if (!this.isStrongPassword(password)) {
+      throw new Error('password_not_strong');
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    this.userRepo.update(id, { passwordHash });
   }
 
   /**

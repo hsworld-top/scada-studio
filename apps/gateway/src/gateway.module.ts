@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { I18nLibModule } from '@app/i18n-lib';
 import { LoggerLibModule } from '@app/logger-lib';
 import { JwtModule } from '@nestjs/jwt';
 import { TenantController } from './tenant/tenant.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-
+import { GlobalExceptionFilter } from './common/global-exception.filter';
+import { I18nService } from 'nestjs-i18n';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
@@ -32,6 +34,14 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
     ]),
   ],
   controllers: [TenantController],
-  providers: [],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useFactory: (i18n: I18nService) => {
+        return new GlobalExceptionFilter(i18n);
+      },
+      inject: [I18nService],
+    },
+  ],
 })
 export class GatewayModule {}
