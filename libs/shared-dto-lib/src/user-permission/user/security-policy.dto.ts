@@ -1,11 +1,18 @@
-import { IsInt, Min } from 'class-validator';
+import { IsInt, Min, IsBoolean } from 'class-validator';
 
 export class SecurityPolicyDto {
   @IsInt()
-  @Min(1)
+  @Min(5)
   maxLoginAttempts: number;
 
   @IsInt()
-  @Min(60)
-  lockDurationSeconds: number;
+  @Min(5)
+  lockoutDurationMinutes: number;
+
+  @IsInt()
+  @Min(30)
+  sessionTimeoutMinutes: number;
+
+  @IsBoolean()
+  enableCaptcha: boolean;
 }

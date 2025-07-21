@@ -28,9 +28,9 @@ export class CreateUserDto {
   phone?: string;
 
   @IsArray()
-  @IsString({ each: true })
+  @IsInt({ each: true })
   @IsNotEmpty({ each: true })
-  roleNames: string[];
+  roleIds: number[];
 
   @IsOptional()
   @IsArray()

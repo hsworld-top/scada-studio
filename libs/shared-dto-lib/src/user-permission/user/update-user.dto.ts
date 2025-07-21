@@ -6,14 +6,24 @@ import {
   IsInt,
   IsPhoneNumber,
   IsEnum,
-  IsNotEmpty,
-} from 'class-validator';
-import { UserStatus } from './user-status.enum';
+  IsNotEmpty, // 导入 IsNotEmpty 装饰器
+  MinLength,
+} from 'class-validator'; // 导入验证器装饰器
+import { UserStatus } from './user-status.enum'; // 导入 UserStatus 枚举类型
 
 export class UpdateUserDto {
   @IsInt()
   @IsNotEmpty()
-  userId: number;
+  id: number;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
+  password?: string;
 
   @IsOptional()
   @IsEmail()
@@ -29,8 +39,8 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  roleNames?: string[];
+  @IsInt({ each: true })
+  roleIds?: number[];
 
   @IsOptional()
   @IsArray()
