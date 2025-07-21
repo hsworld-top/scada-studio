@@ -1,7 +1,7 @@
 import { UseGuards, ValidationPipe } from '@nestjs/common';
 import { PlatformUserService } from './platform-user.service';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
-import { ResponseCode } from '../common/api-response.interface';
+import { ResponseCode } from '../../common/api-response.interface';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ChangeAdminPasswordDto, CreateAdminDto } from '@app/shared-dto-lib';

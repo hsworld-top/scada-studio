@@ -13,7 +13,6 @@ import {
   UpdateTenantDto,
   CreateAdminDto,
   DeleteAdminDto,
-  GetAdminDto,
   ChangeAdminPasswordDto,
   adminLoginDto,
 } from '@app/shared-dto-lib';
@@ -24,6 +23,7 @@ export class TenantController {
     @Inject('PLATFORM_CORE_SERVICE')
     private readonly platformCoreClient: ClientProxy,
   ) {}
+  // 平台管理员登录
   @Post('login')
   login(@Ip() ip: string, @Body(new ValidationPipe()) body: adminLoginDto) {
     return this.platformCoreClient.send('login', {
@@ -32,6 +32,7 @@ export class TenantController {
       ip: ip,
     });
   }
+  // 平台管理员登出
   @Post('logout')
   @UseGuards(PlatformSessionGuard)
   logout(@Ip() ip: string, @Req() req) {
@@ -41,6 +42,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 创建平台管理员
   @Post('createAdmin')
   @UseGuards(PlatformSessionGuard)
   createAdmin(@Req() req, @Body(new ValidationPipe()) body: CreateAdminDto) {
@@ -51,6 +53,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 删除平台管理员
   @Delete('deleteAdmin')
   @UseGuards(PlatformSessionGuard)
   deleteAdmin(@Req() req, @Body(new ValidationPipe()) body: DeleteAdminDto) {
@@ -60,6 +63,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 获取平台管理员列表
   @Get('listAdmins')
   @UseGuards(PlatformSessionGuard)
   listAdmins(@Req() req) {
@@ -68,6 +72,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 修改平台管理员密码
   @Patch('changePassword')
   @UseGuards(PlatformSessionGuard)
   changePassword(
@@ -81,6 +86,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 租户管理
   @Post('/')
   @UseGuards(PlatformSessionGuard)
   createTenant(@Req() req, @Body(new ValidationPipe()) body: CreateTenantDto) {
@@ -91,6 +97,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 查询所有租户
   @Get('/')
   @UseGuards(PlatformSessionGuard)
   listTenants(@Req() req) {
@@ -99,6 +106,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 查询单个租户
   @Get('/:id')
   @UseGuards(PlatformSessionGuard)
   getTenant(@Req() req, @Param('id', ParseIntPipe) id: number) {
@@ -108,6 +116,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 更新租户
   @Patch('/:id')
   @UseGuards(PlatformSessionGuard)
   updateTenant(
@@ -124,6 +133,7 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 删除租户
   @Delete('/:id')
   @UseGuards(PlatformSessionGuard)
   deleteTenant(@Req() req, @Param('id', ParseIntPipe) id: number) {

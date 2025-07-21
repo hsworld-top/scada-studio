@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { CreateTenantDto, UpdateTenantDto } from '@app/shared-dto-lib';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
-import { ResponseCode } from '../common/api-response.interface';
+import { ResponseCode } from '../../common/api-response.interface';
 import { TenantService } from './platform-tenant.service';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';

@@ -1,6 +1,6 @@
 import { Injectable, UseGuards } from '@nestjs/common';
 import { PlatformAuthService } from './platform-auth.service';
-import { ResponseCode } from '../common/api-response.interface';
+import { ResponseCode } from '../../common/api-response.interface';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
 import { MessagePattern, Payload } from '@nestjs/microservices';
