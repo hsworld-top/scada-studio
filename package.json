@@ -8,17 +8,31 @@
   "scripts": {
     "build": "nest build",
     "build:auth": "nest build auth-service && cp casbin-model.conf dist/apps/auth-service/",
+    "build:iam": "nest build iam-service",
+    "build:platform": "nest build platform-core",
+    "build:gateway": "nest build gateway",
+    "build:api-gateway": "nest build api-gateway",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/apps/scada-studio/main",
+    "start:auth": "nest start auth-service --watch",
+    "start:iam": "nest start iam-service --watch",
+    "start:platform": "nest start platform-core --watch",
+    "start:gateway": "nest start gateway --watch",
+    "start:api-gateway": "nest start api-gateway --watch",
+    "start:auth:prod": "node dist/apps/auth-service/main",
+    "start:iam:prod": "node dist/apps/iam-service/main",
+    "start:platform:prod": "node dist/apps/platform-core/main",
+    "start:gateway:prod": "node dist/apps/gateway/main",
+    "start:api-gateway:prod": "node dist/apps/api-gateway/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/scada-studio/test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -107,3 +121,4 @@
     }
   }
 }
+

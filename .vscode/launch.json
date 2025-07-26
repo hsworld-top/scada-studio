@@ -80,6 +80,26 @@
       },
       "console": "integratedTerminal",
       "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug iam-service",
+      "runtimeExecutable": "node",
+      "args": [
+        "--require",
+        "ts-node/register",
+        "--require",
+        "tsconfig-paths/register",
+        "apps/iam-service/src/main.ts"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development",
+        "TS_NODE_PROJECT": "./tsconfig.json"
+      },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }

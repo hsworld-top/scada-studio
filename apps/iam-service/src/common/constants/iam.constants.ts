@@ -67,6 +67,24 @@ export const IAM_MESSAGE_PATTERNS = {
     GET_ROLE_PERMISSIONS: 'iam.permission.getRolePermissions',
     SYNC_PERMISSIONS: 'iam.permission.syncPermissions',
   },
+
+  // ==================== 认证管理相关 ====================
+  AUTH: {
+    LOGIN: 'iam.auth.login',
+    LOGOUT: 'iam.auth.logout',
+    REFRESH_TOKEN: 'iam.auth.refreshToken',
+    VALIDATE_TOKEN: 'iam.auth.validateToken',
+    GENERATE_CAPTCHA: 'iam.auth.generateCaptcha',
+    SSO_LOGIN: 'iam.auth.ssoLogin',
+    CHECK_LOGIN_ATTEMPTS: 'iam.auth.checkLoginAttempts',
+  },
+
+  // ==================== 租户管理相关 ====================
+  TENANT: {
+    GET_BY_SLUG: 'iam.tenant.getBySlug',
+    VALIDATE_STATUS: 'iam.tenant.validateStatus',
+    GET_QUOTA: 'iam.tenant.getQuota',
+  },
 } as const;
 
 /**

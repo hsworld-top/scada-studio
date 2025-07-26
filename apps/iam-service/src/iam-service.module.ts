@@ -16,6 +16,8 @@ import { GroupModule } from './modules/group/group.module';
 import { SecurityModule } from './modules/security/security.module';
 import { CasbinModule } from './modules/casbin/casbin.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { AuditModule } from './modules/audit/audit.module';
 
 // 导入全局异常过滤器
 import { GlobalExceptionFilter } from './common/global-exception.filter';
@@ -54,6 +56,8 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
     RoleModule,
     GroupModule,
     SecurityModule,
+    AuthModule,
+    AuditModule,
   ],
 
   providers: [
@@ -70,6 +74,8 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
     RoleModule,
     GroupModule,
     SecurityModule,
+    AuthModule,
+    AuditModule,
   ],
 })
 export class IamServiceModule {}

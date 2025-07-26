@@ -21,8 +21,8 @@ export class PasswordUtil {
    * @throws Error 当加密失败时抛出异常
    */
   static async hashPassword(
-    plainPassword: string, 
-    saltRounds: number = PasswordUtil.DEFAULT_SALT_ROUNDS
+    plainPassword: string,
+    saltRounds: number = PasswordUtil.DEFAULT_SALT_ROUNDS,
   ): Promise<string> {
     try {
       // 验证输入参数
@@ -50,8 +50,8 @@ export class PasswordUtil {
    * @throws Error 当验证过程出错时抛出异常
    */
   static async verifyPassword(
-    plainPassword: string, 
-    hashedPassword: string
+    plainPassword: string,
+    hashedPassword: string,
   ): Promise<boolean> {
     try {
       // 验证输入参数
@@ -86,7 +86,7 @@ export class PasswordUtil {
       requireNumbers?: boolean;
       requireSpecialChars?: boolean;
       forbiddenPatterns?: string[];
-    } = {}
+    } = {},
   ): {
     isValid: boolean;
     score: number; // 0-100 分
@@ -104,7 +104,7 @@ export class PasswordUtil {
       requireLowercase = true,
       requireNumbers = true,
       requireSpecialChars = true,
-      forbiddenPatterns = []
+      forbiddenPatterns = [],
     } = requirements;
 
     // 检查密码长度
@@ -203,7 +203,7 @@ export class PasswordUtil {
       includeNumbers?: boolean;
       includeSpecialChars?: boolean;
       excludeSimilar?: boolean; // 排除相似字符如 0O, 1l, I
-    } = {}
+    } = {},
   ): string {
     const {
       includeUppercase = true,
@@ -214,19 +214,23 @@ export class PasswordUtil {
     } = options;
 
     let charset = '';
-    
+
     if (includeUppercase) {
-      charset += excludeSimilar ? 'ABCDEFGHJKLMNPQRSTUVWXYZ' : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      charset += excludeSimilar
+        ? 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+        : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     }
-    
+
     if (includeLowercase) {
-      charset += excludeSimilar ? 'abcdefghijkmnopqrstuvwxyz' : 'abcdefghijklmnopqrstuvwxyz';
+      charset += excludeSimilar
+        ? 'abcdefghijkmnopqrstuvwxyz'
+        : 'abcdefghijklmnopqrstuvwxyz';
     }
-    
+
     if (includeNumbers) {
       charset += excludeSimilar ? '23456789' : '0123456789';
     }
-    
+
     if (includeSpecialChars) {
       charset += '!@#$%^&*()_+-=[]{}|;:,.<>?';
     }
