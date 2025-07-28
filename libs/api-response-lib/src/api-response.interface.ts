@@ -1,5 +1,3 @@
-import { Res } from '@nestjs/common';
-
 /**
  * API统一响应格式接口
  */

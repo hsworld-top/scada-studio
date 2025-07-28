@@ -1,5 +1,5 @@
 import { ExceptionFilter } from '@nestjs/common';
-import { ApiResponse, ResponseCode, ErrorCode } from './api-response.interface';
+import { ApiResponse, ResponseCode, ErrorCode } from '@app/api-response-lib';
 
 /**
  * 全局异常过滤器
@@ -12,7 +12,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
    */
   constructor() {}
 
-  catch(exception: any) {
+  catch(exception: any): ApiResponse<null> {
     console.log(exception);
     const code =
       ErrorCode[exception.message] || ResponseCode.INTERNAL_SERVER_ERROR;

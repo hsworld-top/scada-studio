@@ -107,6 +107,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/shared-dto-lib/tsconfig.lib.json"
       }
+    },
+    "api-response-lib": {
+      "type": "library",
+      "root": "libs/api-response-lib",
+      "entryFile": "index",
+      "sourceRoot": "libs/api-response-lib/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/api-response-lib/tsconfig.lib.json"
+      }
     }
   }
 }

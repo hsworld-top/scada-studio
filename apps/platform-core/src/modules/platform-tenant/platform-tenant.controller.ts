@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { CreateTenantDto, UpdateTenantDto } from '@app/shared-dto-lib';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
-import { ResponseCode } from '../../common/api-response.interface';
+import { ResponseCode } from '@app/api-response-lib';
 import { TenantService } from './platform-tenant.service';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
@@ -104,6 +104,28 @@ export class TenantController {
     const result = await this.tenantService.getTenant(payload.id);
     await this.auditTenantLogService.audit({
       operation: 'get_tenant',
+      superAdminUsername: payload.user.username,
+      operatorContext: JSON.stringify(payload),
+    });
+    return {
+      code: ResponseCode.SUCCESS,
+      msg: 'platform.tenant.get_success',
+      data: result,
+    };
+  }
+  /**
+   * 根据租户标识获取租户信息
+   * @param req 请求对象，包含当前用户信息
+   * @param slug 租户标识
+   * @returns 租户信息，含国际化消息
+   */
+  @MessagePattern('getTenantBySlug')
+  async getBySlug(
+    @Payload() payload: { slug: string; user: { username: string } },
+  ) {
+    const result = await this.tenantService.getTenantBySlug(payload.slug);
+    await this.auditTenantLogService.audit({
+      operation: 'get_tenant_by_slug',
       superAdminUsername: payload.user.username,
       operatorContext: JSON.stringify(payload),
     });

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tenant } from './platform-tenant.entity';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
-import { TenantStatus, UpdateTenantDto, UserStatus } from '@app/shared-dto-lib';
+import { TenantStatus } from '@app/shared-dto-lib';
 import { PlatformUser } from '../platform-user/platform-user.entity';
 
 /**
@@ -129,6 +129,23 @@ export class TenantService implements OnModuleInit {
     if (!tenant) {
       throw new Error('tenant_not_found');
     }
+    return tenant;
+  }
+
+  /**
+   * 根据租户标识获取租户信息
+   * @param slug 租户标识
+   * @returns 租户信息
+   */
+  async getTenantBySlug(slug: string): Promise<Tenant> {
+    const tenant = await this.tenantRepository.findOne({
+      where: { slug },
+    });
+
+    if (!tenant) {
+      throw new Error('tenant_not_found');
+    }
+
     return tenant;
   }
 }
