@@ -1,10 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { TenantQuota, TenantStatus } from '@app/shared-dto-lib';
 import { Repository } from 'typeorm';
 import { Tenant } from './platform-tenant.entity';
-import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
-import { TenantStatus } from '@app/shared-dto-lib';
-import { PlatformUser } from '../platform-user/platform-user.entity';
 
 /**
  * TenantService 租户管理服务
@@ -18,9 +16,6 @@ export class TenantService implements OnModuleInit {
   constructor(
     @InjectRepository(Tenant)
     private readonly tenantRepository: Repository<Tenant>,
-    @InjectRepository(PlatformUser)
-    private readonly userRepository: Repository<PlatformUser>,
-    private readonly auditTenantLogService: AuditTenantLogService,
   ) {}
 
   /**
@@ -35,6 +30,12 @@ export class TenantService implements OnModuleInit {
         name: 'default',
         slug: 'default',
         status: TenantStatus.ACTIVE,
+        quota: {
+          maxUsers: 10,
+          maxRoles: 5,
+          maxGroups: 5,
+          maxProjects: 20,
+        },
       });
     }
   }
@@ -44,17 +45,27 @@ export class TenantService implements OnModuleInit {
    * @param param0 包含 name 和 slug
    * @returns 创建的租户实体
    */
-  async createTenant(name: string, slug: string) {
+  async createTenant(name: string, slug: string, quota: TenantQuota) {
     if (await this.tenantRepository.findOne({ where: { slug } })) {
       throw new Error('tenant_already_exists');
     }
     if (await this.tenantRepository.findOne({ where: { name } })) {
       throw new Error('tenant_already_exists');
     }
+    // 最大用户默认值为10, 最大角色默认值为5, 最大组默认值为5, 最大项目默认值为20
+    if (!quota || Object.keys(quota).length === 0) {
+      quota = {
+        maxUsers: 10,
+        maxRoles: 5,
+        maxGroups: 5,
+        maxProjects: 20,
+      };
+    }
     const tenant = await this.tenantRepository.save({
       name,
       slug,
       status: TenantStatus.ACTIVE,
+      quota,
     });
 
     return tenant;
@@ -86,6 +97,7 @@ export class TenantService implements OnModuleInit {
       name: tenant.name,
       slug: tenant.slug,
       status: tenant.status,
+      quota: tenant.quota,
     }));
   }
 
@@ -102,6 +114,7 @@ export class TenantService implements OnModuleInit {
     name: string,
     slug: string,
     status: TenantStatus,
+    quota: TenantQuota,
   ) {
     const tenant = await this.tenantRepository.findOne({ where: { id } });
     if (!tenant) {
@@ -115,6 +128,9 @@ export class TenantService implements OnModuleInit {
     }
     if (status) {
       tenant.status = status;
+    }
+    if (quota && Object.keys(quota).length > 0) {
+      tenant.quota = quota;
     }
     return this.tenantRepository.save(tenant);
   }

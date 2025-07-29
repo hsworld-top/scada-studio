@@ -1,4 +1,4 @@
-import { UseGuards } from '@nestjs/common';
+import { Controller, UseGuards } from '@nestjs/common';
 import { CreateTenantDto, UpdateTenantDto } from '@app/shared-dto-lib';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
 import { ResponseCode } from '@app/api-response-lib';
@@ -11,7 +11,7 @@ import { ValidationPipe } from '@nestjs/common';
  * 租户管理控制器
  * 提供租户的增删查改接口，并记录操作审计日志
  */
-@UseGuards(PlatformSessionGuard)
+@Controller()
 export class TenantController {
   /**
    * 构造函数，注入租户服务、i18n、审计服务
@@ -27,14 +27,16 @@ export class TenantController {
    * @param payload 创建数据
    * @returns 创建结果，含国际化消息
    */
+  @UseGuards(PlatformSessionGuard)
   @MessagePattern('createTenant')
   async create(
     @Payload(new ValidationPipe())
-    payload: CreateTenantDto & { user: { username: string } },
+    payload: CreateTenantDto,
   ) {
     const result = await this.tenantService.createTenant(
       payload.name,
       payload.slug,
+      payload.quota,
     );
     await this.auditTenantLogService.audit({
       operation: 'create_tenant',
@@ -54,6 +56,7 @@ export class TenantController {
    * @param id 租户ID
    * @returns 删除结果，含国际化消息
    */
+  @UseGuards(PlatformSessionGuard)
   @MessagePattern('deleteTenant')
   async delete(
     @Payload(new ValidationPipe())
@@ -80,6 +83,7 @@ export class TenantController {
    * @param req 请求对象，包含当前用户信息
    * @returns 租户列表，含国际化消息
    */
+  @UseGuards(PlatformSessionGuard)
   @MessagePattern('listTenants')
   async list(@Payload() payload: { user: { username: string } }) {
     const result = await this.tenantService.listTenants();
@@ -99,6 +103,7 @@ export class TenantController {
    * @param id 租户ID
    * @returns 租户信息，含国际化消息
    */
+  @UseGuards(PlatformSessionGuard)
   @MessagePattern('getTenant')
   async get(@Payload() payload: { id: number; user: { username: string } }) {
     const result = await this.tenantService.getTenant(payload.id);
@@ -114,21 +119,13 @@ export class TenantController {
     };
   }
   /**
-   * 根据租户标识获取租户信息
-   * @param req 请求对象，包含当前用户信息
+   * 根据租户标识获取租户信息（网关内部调用）
    * @param slug 租户标识
    * @returns 租户信息，含国际化消息
    */
   @MessagePattern('getTenantBySlug')
-  async getBySlug(
-    @Payload() payload: { slug: string; user: { username: string } },
-  ) {
+  async getBySlug(@Payload() payload: { slug: string }) {
     const result = await this.tenantService.getTenantBySlug(payload.slug);
-    await this.auditTenantLogService.audit({
-      operation: 'get_tenant_by_slug',
-      superAdminUsername: payload.user.username,
-      operatorContext: JSON.stringify(payload),
-    });
     return {
       code: ResponseCode.SUCCESS,
       msg: 'platform.tenant.get_success',
@@ -137,21 +134,22 @@ export class TenantController {
   }
   /**
    * 更新租户信息
-   * @param req 请求对象，包含当前用户信息
    * @param id 租户ID
    * @param payload 更新数据
    * @returns 更新结果，含国际化消息
    */
+  @UseGuards(PlatformSessionGuard)
   @MessagePattern('updateTenant')
   async update(
     @Payload(new ValidationPipe())
-    payload: UpdateTenantDto & { user: { username: string }; id: number },
+    payload: UpdateTenantDto,
   ) {
     const result = await this.tenantService.updateTenant(
       payload.id,
       payload.name,
       payload.slug,
       payload.status,
+      payload.quota,
     );
     await this.auditTenantLogService.audit({
       operation: 'update_tenant',

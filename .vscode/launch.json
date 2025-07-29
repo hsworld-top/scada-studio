@@ -47,6 +47,7 @@
       "name": "Debug platform-core",
       "runtimeExecutable": "node",
       "args": [
+        "--inspect=9230",
         "--require",
         "ts-node/register",
         "--require",
@@ -59,7 +60,9 @@
         "TS_NODE_PROJECT": "./tsconfig.json"
       },
       "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "port": 9230,
+      "restart": true
     },
     {
       "type": "node",
@@ -79,7 +82,9 @@
         "TS_NODE_PROJECT": "./tsconfig.json"
       },
       "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "port": 9229,
+      "restart": true
     },
     {
       "type": "node",

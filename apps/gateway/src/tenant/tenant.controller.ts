@@ -4,13 +4,14 @@ import {
   ValidationPipe,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import { Post, Body, Req, Get, Param, Patch, Delete } from '@nestjs/common';
 import {
   CreateTenantDto,
-  UpdateTenantDto,
+  UpdateTenantBaseDto,
   CreateAdminDto,
   DeleteAdminDto,
   ChangeAdminPasswordDto,
@@ -86,13 +87,14 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
-  // 租户管理
+  // 租户管理 创建租户
   @Post('/')
   @UseGuards(PlatformSessionGuard)
   createTenant(@Req() req, @Body(new ValidationPipe()) body: CreateTenantDto) {
     return this.platformCoreClient.send('createTenant', {
       name: body.name,
       slug: body.slug,
+      quota: body.quota,
       userId: req.user.userId,
       sessionId: req.user.sessionId,
     });
@@ -116,19 +118,30 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
+  // 根据租户标识查询单个租户
+  @Get('/slug/:slug')
+  @UseGuards(PlatformSessionGuard)
+  getTenantBySlug(@Req() req, @Param('slug') slug: string) {
+    return this.platformCoreClient.send('getTenantBySlug', {
+      slug,
+      userId: req.user.userId,
+      sessionId: req.user.sessionId,
+    });
+  }
   // 更新租户
   @Patch('/:id')
   @UseGuards(PlatformSessionGuard)
   updateTenant(
     @Req() req,
     @Param('id', ParseIntPipe) id: number,
-    @Body(new ValidationPipe()) body: UpdateTenantDto,
+    @Body(new ValidationPipe()) body: UpdateTenantBaseDto,
   ) {
     return this.platformCoreClient.send('updateTenant', {
       id,
       name: body?.name,
       slug: body?.slug,
       status: body?.status,
+      quota: body?.quota,
       userId: req.user.userId,
       sessionId: req.user.sessionId,
     });

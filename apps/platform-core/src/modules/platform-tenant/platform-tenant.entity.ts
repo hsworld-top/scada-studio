@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TenantStatus } from '@app/shared-dto-lib';
+import { TenantQuota, TenantStatus } from '@app/shared-dto-lib';
 
 /**
  * 租户实体
@@ -52,4 +52,10 @@ export class Tenant {
    */
   @UpdateDateColumn()
   updatedAt: Date;
+
+  /**
+   * 租户配额
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  quota: TenantQuota;
 }
