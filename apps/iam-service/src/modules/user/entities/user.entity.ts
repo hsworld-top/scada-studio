@@ -16,7 +16,7 @@ import { Role } from '../../role/entities/role.entity';
 import { Group } from '../../group/entities/group.entity';
 import { UserStatus } from '@app/shared-dto-lib';
 
-@Entity()
+@Entity('tenant_user')
 @Index('idx_user_tenant_username', ['tenantId', 'username'], {
   unique: true,
   where: `"deletedAt" IS NULL`,
@@ -61,7 +61,7 @@ export class User {
 
   @ManyToMany(() => Role, { cascade: true, eager: true })
   @JoinTable({
-    name: 'user_roles_role',
+    name: 'tenant_user_roles_role',
     joinColumn: { name: 'userId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
   })
@@ -69,7 +69,7 @@ export class User {
 
   @ManyToMany(() => Group, (group) => group.users, { cascade: true })
   @JoinTable({
-    name: 'user_groups_group',
+    name: 'tenant_user_groups_group',
     joinColumn: { name: 'userId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'groupId', referencedColumnName: 'id' },
   })

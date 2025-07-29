@@ -10,7 +10,7 @@ import {
  * 审计日志实体
  * 记录系统中的各种操作日志，用于安全审计和问题追踪
  */
-@Entity()
+@Entity('tenant_audit_log')
 @Index('idx_audit_user_id', ['userId'])
 @Index('idx_audit_action', ['action'])
 @Index('idx_audit_resource', ['resource'])

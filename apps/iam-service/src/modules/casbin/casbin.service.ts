@@ -5,7 +5,7 @@ import { AppLogger } from '@app/logger-lib'; // 导入 AppLogger
 import TypeORMAdapter from 'typeorm-adapter'; // 导入 TypeORMAdapter
 import { TypeORMAdapterOptions } from 'typeorm-adapter'; // 导入 TypeORMAdapterOptions
 import * as path from 'path'; // 导入 path 模块
-import { CACHE_KEYS } from '../../common/constants/iam.constants'; // 导入 CACHE_KEYS 常量
+import { IAM_CACHE_KEYS } from '@app/shared-dto-lib'; // 导入 CACHE_KEYS 常量
 
 @Injectable()
 export class CasbinService implements OnModuleInit {
@@ -64,7 +64,7 @@ export class CasbinService implements OnModuleInit {
     action: string,
   ): Promise<boolean> {
     // 缓存键
-    const cacheKey = `${CACHE_KEYS.PERMISSION_CHECK}${tenantId}:${userId}:${resource}:${action}`;
+    const cacheKey = `${IAM_CACHE_KEYS.PERMISSION_CACHE}${tenantId}:${userId}:${resource}:${action}`;
     const cachedResult = await this.redisService.get(cacheKey);
 
     if (cachedResult !== null) {
@@ -260,7 +260,7 @@ export class CasbinService implements OnModuleInit {
     const result = await this.enforcer.deleteUser(userId);
     if (result) {
       // 清除用户相关的所有缓存
-      const pattern = `${CACHE_KEYS.PERMISSION_CHECK}*:${userId}:*`;
+      const pattern = `${IAM_CACHE_KEYS.PERMISSION_CACHE}*:${userId}:*`;
       await this.redisService.scanDel(pattern);
     }
     return result;
@@ -273,7 +273,7 @@ export class CasbinService implements OnModuleInit {
     const result = await this.enforcer.deleteRole(role);
     if (result) {
       // 清除角色相关的所有缓存
-      const pattern = `${CACHE_KEYS.ROLE_PERMISSIONS}*:${role}`;
+      const pattern = `${IAM_CACHE_KEYS.ROLE_CACHE}*:${role}`;
       await this.redisService.scanDel(pattern);
     }
     return result;
@@ -302,7 +302,7 @@ export class CasbinService implements OnModuleInit {
     userId: string,
     tenantId: string,
   ): Promise<void> {
-    const pattern = `${CACHE_KEYS.PERMISSION_CHECK}${tenantId}:${userId}:*`;
+    const pattern = `${IAM_CACHE_KEYS.PERMISSION_CACHE}${tenantId}:${userId}:*`;
     await this.redisService.scanDel(pattern);
     this.logger.debug(
       `Cleared permission cache for user ${userId} in tenant ${tenantId}`,
@@ -316,7 +316,7 @@ export class CasbinService implements OnModuleInit {
     role: string,
     tenantId: string,
   ): Promise<void> {
-    const rolePattern = `${CACHE_KEYS.ROLE_PERMISSIONS}${tenantId}:${role}`;
+    const rolePattern = `${IAM_CACHE_KEYS.ROLE_CACHE}${tenantId}:${role}`;
     await this.redisService.del(rolePattern);
 
     // 清除所有拥有该角色的用户的权限缓存
@@ -335,9 +335,9 @@ export class CasbinService implements OnModuleInit {
    */
   private async clearAllPermissionCache(): Promise<void> {
     const patterns = [
-      `${CACHE_KEYS.PERMISSION_CHECK}*`,
-      `${CACHE_KEYS.ROLE_PERMISSIONS}*`,
-      `${CACHE_KEYS.USER_PERMISSIONS}*`,
+      `${IAM_CACHE_KEYS.PERMISSION_CACHE}*`,
+      `${IAM_CACHE_KEYS.ROLE_CACHE}*`,
+      `${IAM_CACHE_KEYS.USER_CACHE}*`,
     ];
 
     for (const pattern of patterns) {

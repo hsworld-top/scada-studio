@@ -11,7 +11,7 @@ import { TenantQuota, TenantStatus } from '@app/shared-dto-lib';
  * 租户实体
  * 表示一个独立的客户/组织，是多租户架构的核心
  */
-@Entity('platform_tenants')
+@Entity('platform_tenant')
 export class Tenant {
   /**
    * 租户主键，自增ID

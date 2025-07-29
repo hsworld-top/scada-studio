@@ -5,7 +5,7 @@ import { UserStatus } from '@app/shared-dto-lib';
  * 平台用户实体
  * 用于存储平台超级管理员账号信息
  */
-@Entity('platform_users')
+@Entity('platform_user')
 export class PlatformUser {
   /**
    * 用户主键，UUID 格式

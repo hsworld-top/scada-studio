@@ -7,7 +7,7 @@ import {
   Index,
 } from 'typeorm';
 
-@Entity()
+@Entity('tenant_security_settings')
 @Index('idx_security_tenant', ['tenantId'], { unique: true })
 export class SecuritySettings {
   @PrimaryGeneratedColumn()

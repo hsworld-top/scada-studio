@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 
-@Entity()
+@Entity('tenant_role')
 @Index('idx_role_tenant_name', ['tenantId', 'name'], { unique: true })
 export class Role {
   @PrimaryGeneratedColumn()

@@ -9,7 +9,7 @@ import {
  * 租户操作审计日志实体
  * 用于记录平台超级管理员对租户相关的操作行为
  */
-@Entity('audit_tenant_log')
+@Entity('platform_audit_tenant_log')
 export class AuditTenantLog {
   /**
    * 日志主键，自增ID
