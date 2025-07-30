@@ -17,7 +17,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const code =
       ErrorCode[exception.message] || ResponseCode.INTERNAL_SERVER_ERROR;
 
-    const responseData: ApiResponse = {
+    const responseData: ApiResponse<null> = {
       code,
       msg: exception.message,
       data: null,

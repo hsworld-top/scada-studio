@@ -11,6 +11,9 @@ import { CasbinModule } from './modules/casbin/casbin.module';
 import { SharedDatabaseModule } from './modules/database/database.module';
 
 // 导入业务模块
+import { UserModule } from './modules/user/user.module';
+import { GroupModule } from './modules/group/group.module';
+import { RoleModule } from './modules/role/role.module';
 
 // 导入全局异常过滤器
 import { GlobalExceptionFilter } from './common/global-exception.filter';
@@ -43,6 +46,9 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
     // 权限控制模块
     CasbinModule,
     // 业务功能模块
+    UserModule,
+    GroupModule,
+    RoleModule,
   ],
 
   providers: [

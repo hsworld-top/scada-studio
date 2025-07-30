@@ -1,12 +1,29 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Group } from './entities/group.entity';
 import { Role } from '../role/entities/role.entity';
 import { User } from '../user/entities/user.entity';
-import { CreateGroupDto, UpdateGroupDto } from '@app/shared-dto-lib';
+import {
+  CreateGroupDto,
+  UpdateGroupDto,
+  FindOneGroupDto,
+  RemoveGroupDto,
+  AddUsersToGroupDto,
+  RemoveUsersFromGroupDto,
+} from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
-
+/**
+ * 用户组服务
+ * @description
+ * 用户组服务是用户组管理的核心服务，用于创建、查询、更新和删除用户组。
+ * 用户组服务与用户、角色、租户等实体之间存在多对多关联关系。
+ * 用户组服务与用户、角色、租户等实体之间存在多对多关联关系。
+ */
 @Injectable()
 export class GroupService {
   constructor(
@@ -27,10 +44,10 @@ export class GroupService {
    * @param createGroupDto 用户组创建DTO
    * @returns 创建的用户组
    */
-  async create(tenantId: number, createGroupDto: CreateGroupDto): Promise<Group> {
+  async create(createGroupDto: CreateGroupDto): Promise<Group> {
     // 检查用户组名是否已存在
     const existingGroup = await this.groupRepository.findOne({
-      where: { tenantId, name: createGroupDto.name }
+      where: { tenantId: createGroupDto.tenantId, name: createGroupDto.name },
     });
 
     if (existingGroup) {
@@ -40,16 +57,16 @@ export class GroupService {
     // 创建新用户组
     const group = this.groupRepository.create({
       ...createGroupDto,
-      tenantId,
+      tenantId: createGroupDto.tenantId,
     });
 
     // 如果指定了角色，则关联角色
     if (createGroupDto.roleIds && createGroupDto.roleIds.length > 0) {
       const roles = await this.roleRepository.find({
-        where: { 
+        where: {
           id: In(createGroupDto.roleIds),
-          tenantId 
-        }
+          tenantId: createGroupDto.tenantId,
+        },
       });
       group.roles = roles;
     }
@@ -57,10 +74,10 @@ export class GroupService {
     // 如果指定了用户，则关联用户
     if (createGroupDto.userIds && createGroupDto.userIds.length > 0) {
       const users = await this.userRepository.find({
-        where: { 
+        where: {
           id: In(createGroupDto.userIds),
-          tenantId 
-        }
+          tenantId: createGroupDto.tenantId,
+        },
       });
       group.users = users;
     }
@@ -86,14 +103,14 @@ export class GroupService {
    * @param id 用户组ID
    * @returns 用户组信息
    */
-  async findOne(tenantId: number, id: number): Promise<Group> {
+  async findOne(findOneGroupDto: FindOneGroupDto): Promise<Group> {
     const group = await this.groupRepository.findOne({
-      where: { id, tenantId },
+      where: { id: findOneGroupDto.id },
       relations: ['roles', 'users'],
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${id} 的用户组不存在`);
+      throw new NotFoundException(`ID为 ${findOneGroupDto.id} 的用户组不存在`);
     }
 
     return group;
@@ -106,20 +123,20 @@ export class GroupService {
    * @param updateGroupDto 更新数据
    * @returns 更新后的用户组
    */
-  async update(tenantId: number, id: number, updateGroupDto: UpdateGroupDto): Promise<Group> {
+  async update(updateGroupDto: UpdateGroupDto): Promise<Group> {
     const group = await this.groupRepository.findOne({
-      where: { id, tenantId },
+      where: { id: updateGroupDto.id },
       relations: ['roles', 'users'],
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${id} 的用户组不存在`);
+      throw new NotFoundException(`ID为 ${updateGroupDto.id} 的用户组不存在`);
     }
 
     // 如果更新用户组名，检查是否与其他用户组冲突
     if (updateGroupDto.name && updateGroupDto.name !== group.name) {
       const existingGroup = await this.groupRepository.findOne({
-        where: { tenantId, name: updateGroupDto.name }
+        where: { tenantId: updateGroupDto.tenantId, name: updateGroupDto.name },
       });
 
       if (existingGroup) {
@@ -129,15 +146,16 @@ export class GroupService {
 
     // 更新基本信息
     if (updateGroupDto.name) group.name = updateGroupDto.name;
-    if (updateGroupDto.description) group.description = updateGroupDto.description;
+    if (updateGroupDto.description)
+      group.description = updateGroupDto.description;
 
     // 更新角色关联
     if (updateGroupDto.roleIds) {
       const roles = await this.roleRepository.find({
-        where: { 
+        where: {
           id: In(updateGroupDto.roleIds),
-          tenantId 
-        }
+          tenantId: updateGroupDto.tenantId,
+        },
       });
       group.roles = roles;
     }
@@ -145,10 +163,10 @@ export class GroupService {
     // 更新用户关联
     if (updateGroupDto.userIds) {
       const users = await this.userRepository.find({
-        where: { 
+        where: {
           id: In(updateGroupDto.userIds),
-          tenantId 
-        }
+          tenantId: updateGroupDto.tenantId,
+        },
       });
       group.users = users;
     }
@@ -161,16 +179,16 @@ export class GroupService {
    * @param tenantId 租户ID
    * @param id 用户组ID
    */
-  async remove(tenantId: number, id: number): Promise<void> {
+  async remove(removeGroupDto: RemoveGroupDto): Promise<void> {
     const group = await this.groupRepository.findOne({
-      where: { id, tenantId },
+      where: { id: removeGroupDto.id },
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${id} 的用户组不存在`);
+      throw new NotFoundException(`ID为 ${removeGroupDto.id} 的用户组不存在`);
     }
 
-    await this.groupRepository.softDelete(id);
+    await this.groupRepository.softDelete(removeGroupDto.id);
   }
 
   /**
@@ -180,21 +198,26 @@ export class GroupService {
    * @param userIds 用户ID数组
    * @returns 更新后的用户组
    */
-  async addUsers(tenantId: number, groupId: number, userIds: number[]): Promise<Group> {
+  async addUsers(addUsersToGroupDto: AddUsersToGroupDto): Promise<Group> {
     const group = await this.groupRepository.findOne({
-      where: { id: groupId, tenantId },
+      where: {
+        id: addUsersToGroupDto.groupId,
+        tenantId: addUsersToGroupDto.tenantId,
+      },
       relations: ['users'],
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${groupId} 的用户组不存在`);
+      throw new NotFoundException(
+        `ID为 ${addUsersToGroupDto.groupId} 的用户组不存在`,
+      );
     }
 
     const users = await this.userRepository.find({
-      where: { 
-        id: In(userIds),
-        tenantId 
-      }
+      where: {
+        id: In(addUsersToGroupDto.userIds),
+        tenantId: addUsersToGroupDto.tenantId,
+      },
     });
 
     if (!group.users) {
@@ -203,7 +226,7 @@ export class GroupService {
 
     // 添加新用户到组
     group.users = [...group.users, ...users];
-    
+
     return this.groupRepository.save(group);
   }
 
@@ -214,14 +237,21 @@ export class GroupService {
    * @param userIds 用户ID数组
    * @returns 更新后的用户组
    */
-  async removeUsers(tenantId: number, groupId: number, userIds: number[]): Promise<Group> {
+  async removeUsers(
+    removeUsersFromGroupDto: RemoveUsersFromGroupDto,
+  ): Promise<Group> {
     const group = await this.groupRepository.findOne({
-      where: { id: groupId, tenantId },
+      where: {
+        id: removeUsersFromGroupDto.groupId,
+        tenantId: removeUsersFromGroupDto.tenantId,
+      },
       relations: ['users'],
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${groupId} 的用户组不存在`);
+      throw new NotFoundException(
+        `ID为 ${removeUsersFromGroupDto.groupId} 的用户组不存在`,
+      );
     }
 
     if (!group.users) {
@@ -229,8 +259,10 @@ export class GroupService {
     }
 
     // 从组中移除指定用户
-    group.users = group.users.filter(user => !userIds.includes(user.id));
-    
+    group.users = group.users.filter(
+      (user) => !removeUsersFromGroupDto.userIds.includes(user.id),
+    );
+
     return this.groupRepository.save(group);
   }
 }

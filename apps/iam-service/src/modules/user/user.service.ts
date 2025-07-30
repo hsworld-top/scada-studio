@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common'; // 导入 Injectable、NotFoundException 和 ConflictException
+import { Injectable } from '@nestjs/common'; // 导入 Injectable、NotFoundException 和 ConflictException
 import { InjectRepository } from '@nestjs/typeorm'; // 导入 InjectRepository
 import { Repository, In } from 'typeorm'; // 导入 Repository 和 In
 import { User } from './entities/user.entity'; // 导入 User 实体
@@ -41,7 +37,7 @@ export class UserService {
     });
 
     if (existingUser) {
-      throw new ConflictException(`用户名 ${createUserDto.username} 已存在`);
+      throw new Error('iam.user.username_exists');
     }
 
     // 创建新用户
@@ -70,12 +66,16 @@ export class UserService {
       });
       user.groups = groups;
     }
+    // 如果指定了偏好设置，则更新偏好设置
+    if (createUserDto.preferences) {
+      user.preferences = createUserDto.preferences;
+    }
 
     // 保存用户
     const savedUser = await this.userRepository.save(user);
 
     // 返回用户信息（不含密码）
-    const { password, ...result } = savedUser;
+    const { password: _, ...result } = savedUser;
     return result as User;
   }
 
@@ -92,7 +92,7 @@ export class UserService {
 
     // 移除密码字段
     return users.map((user) => {
-      const { password, ...result } = user;
+      const { password: _, ...result } = user;
       return result as User;
     });
   }
@@ -110,11 +110,11 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`ID为 ${id} 的用户不存在`);
+      throw new Error(`iam.user.user_not_found:${id}`);
     }
 
     // 移除密码字段
-    const { password, ...result } = user;
+    const { password: _, ...result } = user;
     return result as User;
   }
 
@@ -124,14 +124,14 @@ export class UserService {
    * @param updateUserDto 更新数据
    * @returns 更新后的用户
    */
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.userRepository.findOne({
-      where: { id, tenantId: updateUserDto.tenantId },
+      where: { id: updateUserDto.id, tenantId: updateUserDto.tenantId },
       relations: ['roles', 'groups'],
     });
 
     if (!user) {
-      throw new NotFoundException(`ID为 ${id} 的用户不存在`);
+      throw new Error(`iam.user.user_not_found:${updateUserDto.id}`);
     }
 
     // 更新基本信息
@@ -143,13 +143,7 @@ export class UserService {
     if (updateUserDto.allowMultiSession !== undefined) {
       user.allowMultiSession = updateUserDto.allowMultiSession;
     }
-    // if (updateUserDto.preferences) {
-    //   user.preferences = {
-    //     ...user.preferences,
-    //     ...updateUserDto.preferences,
-    //   };
-    // }
-
+    if (updateUserDto.preferences) user.preferences = updateUserDto.preferences;
     // 如果提供了新密码，则更新密码
     if (updateUserDto.password) {
       user.password = updateUserDto.password;
@@ -181,25 +175,34 @@ export class UserService {
     const updatedUser = await this.userRepository.save(user);
 
     // 返回用户信息（不含密码）
-    const { password, ...result } = updatedUser;
+    const { password: _, ...result } = updatedUser;
     return result as User;
   }
 
   /**
-   * 删除用户（软删除）
+   * 批量删除用户（软删除）
+   * @param ids 用户ID列表
    * @param tenantId 租户ID
-   * @param id 用户ID
    */
-  async remove(tenantId: number, id: number): Promise<void> {
-    const user = await this.userRepository.findOne({
-      where: { id, tenantId },
+  async remove(ids: number[], tenantId: number): Promise<void> {
+    const users = await this.userRepository.find({
+      where: { id: In(ids), tenantId },
     });
-
-    if (!user) {
-      throw new NotFoundException(`ID为 ${id} 的用户不存在`);
+    const foundIds: number[] = [];
+    const notFoundIds: number[] = [];
+    users.forEach((user) => {
+      if (!ids.includes(user.id)) {
+        notFoundIds.push(user.id);
+      } else {
+        foundIds.push(user.id);
+      }
+    });
+    // 删除已存在的用户
+    await this.userRepository.softDelete(foundIds);
+    // 如果存在不存在的用户，则抛出异常
+    if (notFoundIds.length > 0) {
+      throw new Error(`iam.user.user_not_found:${notFoundIds.join(',')}`);
     }
-
-    await this.userRepository.softDelete(id);
   }
 
   /**
@@ -226,28 +229,6 @@ export class UserService {
 
     // 返回用户信息（不含密码）
     const { password: _, ...result } = user;
-    return result as User;
-  }
-
-  /**
-   * 根据用户名查找用户
-   * @param tenantId 租户ID
-   * @param username 用户名
-   * @returns 用户信息
-   */
-  async findByUsername(
-    tenantId: number,
-    username: string,
-  ): Promise<User | null> {
-    const user = await this.userRepository.findOne({
-      where: { tenantId, username },
-      relations: ['roles', 'groups'],
-    });
-
-    if (!user) return null;
-
-    // 返回用户信息（不含密码）
-    const { password, ...result } = user;
     return result as User;
   }
 }

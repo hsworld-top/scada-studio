@@ -39,7 +39,9 @@ export enum ResponseCode {
   /** 租户不存在 */
   TENANT_NOT_FOUND = 1010,
 }
-
+/**
+ * 错误码映射
+ */
 export const ErrorCode: Record<string, number> = {
   password_incorrect: ResponseCode.PASSWORD_INCORRECT,
   account_disabled: ResponseCode.ACCOUNT_DISABLED,

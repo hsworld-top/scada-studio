@@ -3,9 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../user/entities/user.entity';
 import { Role } from '../role/entities/role.entity';
 import { Group } from '../group/entities/group.entity';
-import { SecuritySettings } from '../security/entities/security-settings.entity';
-import { AuditLog } from '../audit/entities/audit-log.entity';
-
 /**
  * 共享数据库模块
  * @description
@@ -16,9 +13,7 @@ import { AuditLog } from '../audit/entities/audit-log.entity';
  */
 @Global()
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User, Role, Group, SecuritySettings, AuditLog]),
-  ],
+  imports: [TypeOrmModule.forFeature([User, Role, Group])],
   exports: [TypeOrmModule],
 })
 export class SharedDatabaseModule {}

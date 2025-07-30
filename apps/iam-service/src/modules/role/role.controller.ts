@@ -1,8 +1,15 @@
 import { Controller, ValidationPipe } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { RoleService } from './role.service';
-import { CreateRoleDto, UpdateRoleDto } from '@app/shared-dto-lib';
+import {
+  CreateRoleDto,
+  FindRolesDto,
+  UpdateRoleDto,
+  FindOneRoleDto,
+  RemoveRoleDto,
+} from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
+import { ResponseCode } from '@app/api-response-lib';
 
 /**
  * 角色管理控制器
@@ -24,40 +31,15 @@ export class RoleController {
    * @description 在指定租户下创建新角色，角色名在租户内必须唯一
    * @param payload 包含租户ID、角色数据和操作者信息的载荷
    * @returns 创建成功的角色信息
-   * @throws ConflictException 当角色名已存在时
    */
   @MessagePattern('iam.role.create')
-  async create(
-    @Payload(new ValidationPipe()) 
-    payload: {
-      tenantId: number;
-      data: CreateRoleDto;
-      operatorId?: number; // 操作者ID，用于审计日志
-    }
-  ) {
-    this.logger.log(
-      `创建角色请求 - 租户: ${payload.tenantId}, 角色名: ${payload.data.name}, 操作者: ${payload.operatorId}`,
-    );
-
-    try {
-      const role = await this.roleService.create(payload.tenantId, payload.data);
-      
-      this.logger.log(
-        `角色创建成功 - ID: ${role.id}, 角色名: ${role.name}, 租户: ${payload.tenantId}`,
-      );
-
-      return {
-        success: true,
-        data: role,
-        message: '角色创建成功',
-      };
-    } catch (error) {
-      this.logger.error(
-        `角色创建失败 - 租户: ${payload.tenantId}, 角色名: ${payload.data.name}, 错误: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+  async create(@Payload(new ValidationPipe()) payload: CreateRoleDto) {
+    const role = await this.roleService.create(payload);
+    return {
+      code: ResponseCode.SUCCESS,
+      data: role,
+      msg: 'iam.role.create_success',
+    };
   }
 
   /**
@@ -67,36 +49,13 @@ export class RoleController {
    * @returns 角色列表
    */
   @MessagePattern('iam.role.findAll')
-  async findAll(
-    @Payload(new ValidationPipe()) 
-    payload: {
-      tenantId: number;
-      operatorId?: number;
-    }
-  ) {
-    this.logger.log(
-      `查询角色列表 - 租户: ${payload.tenantId}, 操作者: ${payload.operatorId}`,
-    );
-
-    try {
-      const roles = await this.roleService.findAll(payload.tenantId);
-      
-      this.logger.log(
-        `角色列表查询成功 - 租户: ${payload.tenantId}, 角色数量: ${roles.length}`,
-      );
-
-      return {
-        success: true,
-        data: roles,
-        message: '角色列表获取成功',
-      };
-    } catch (error) {
-      this.logger.error(
-        `角色列表查询失败 - 租户: ${payload.tenantId}, 错误: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+  async findAll(@Payload(new ValidationPipe()) payload: FindRolesDto) {
+    const roles = await this.roleService.findAll(payload.tenantId);
+    return {
+      code: ResponseCode.SUCCESS,
+      data: roles,
+      msg: 'iam.role.find_all_success',
+    };
   }
 
   /**
@@ -107,37 +66,13 @@ export class RoleController {
    * @throws NotFoundException 当角色不存在时
    */
   @MessagePattern('iam.role.findOne')
-  async findOne(
-    @Payload(new ValidationPipe()) 
-    payload: {
-      tenantId: number;
-      id: number;
-      operatorId?: number;
-    }
-  ) {
-    this.logger.log(
-      `查询角色详情 - 租户: ${payload.tenantId}, 角色ID: ${payload.id}, 操作者: ${payload.operatorId}`,
-    );
-
-    try {
-      const role = await this.roleService.findOne(payload.tenantId, payload.id);
-      
-      this.logger.log(
-        `角色详情查询成功 - ID: ${role.id}, 角色名: ${role.name}, 租户: ${payload.tenantId}`,
-      );
-
-      return {
-        success: true,
-        data: role,
-        message: '角色信息获取成功',
-      };
-    } catch (error) {
-      this.logger.error(
-        `角色详情查询失败 - 租户: ${payload.tenantId}, 角色ID: ${payload.id}, 错误: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+  async findOne(@Payload(new ValidationPipe()) payload: FindOneRoleDto) {
+    const role = await this.roleService.findOne(payload);
+    return {
+      code: ResponseCode.SUCCESS,
+      data: role,
+      msg: 'iam.role.find_one_success',
+    };
   }
 
   /**
@@ -149,42 +84,13 @@ export class RoleController {
    * @throws ConflictException 当角色名冲突时
    */
   @MessagePattern('iam.role.update')
-  async update(
-    @Payload(new ValidationPipe()) 
-    payload: {
-      tenantId: number;
-      id: number;
-      data: UpdateRoleDto;
-      operatorId?: number;
-    }
-  ) {
-    this.logger.log(
-      `更新角色请求 - 租户: ${payload.tenantId}, 角色ID: ${payload.id}, 操作者: ${payload.operatorId}`,
-    );
-
-    try {
-      const role = await this.roleService.update(
-        payload.tenantId, 
-        payload.id, 
-        payload.data
-      );
-      
-      this.logger.log(
-        `角色更新成功 - ID: ${role.id}, 角色名: ${role.name}, 租户: ${payload.tenantId}`,
-      );
-
-      return {
-        success: true,
-        data: role,
-        message: '角色信息更新成功',
-      };
-    } catch (error) {
-      this.logger.error(
-        `角色更新失败 - 租户: ${payload.tenantId}, 角色ID: ${payload.id}, 错误: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+  async update(@Payload(new ValidationPipe()) payload: UpdateRoleDto) {
+    const role = await this.roleService.update(payload);
+    return {
+      code: ResponseCode.SUCCESS,
+      data: role,
+      msg: 'iam.role.update_success',
+    };
   }
 
   /**
@@ -197,35 +103,11 @@ export class RoleController {
    * @throws ConflictException 当角色仍被使用时（如果有相关检查）
    */
   @MessagePattern('iam.role.remove')
-  async remove(
-    @Payload(new ValidationPipe()) 
-    payload: {
-      tenantId: number;
-      id: number;
-      operatorId?: number;
-    }
-  ) {
-    this.logger.log(
-      `删除角色请求 - 租户: ${payload.tenantId}, 角色ID: ${payload.id}, 操作者: ${payload.operatorId}`,
-    );
-
-    try {
-      await this.roleService.remove(payload.tenantId, payload.id);
-      
-      this.logger.log(
-        `角色删除成功 - 角色ID: ${payload.id}, 租户: ${payload.tenantId}`,
-      );
-
-      return {
-        success: true,
-        message: '角色删除成功',
-      };
-    } catch (error) {
-      this.logger.error(
-        `角色删除失败 - 租户: ${payload.tenantId}, 角色ID: ${payload.id}, 错误: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
+  async remove(@Payload(new ValidationPipe()) payload: RemoveRoleDto) {
+    await this.roleService.remove(payload);
+    return {
+      code: ResponseCode.SUCCESS,
+      msg: 'iam.role.remove_success',
+    };
   }
 }
