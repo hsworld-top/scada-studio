@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Group } from './entities/group.entity';
@@ -51,7 +47,7 @@ export class GroupService {
     });
 
     if (existingGroup) {
-      throw new ConflictException(`用户组名 ${createGroupDto.name} 已存在`);
+      throw new Error('iam.group.name_already_exists');
     }
 
     // 创建新用户组
@@ -110,7 +106,7 @@ export class GroupService {
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${findOneGroupDto.id} 的用户组不存在`);
+      throw new Error('iam.group.not_found');
     }
 
     return group;
@@ -130,7 +126,7 @@ export class GroupService {
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${updateGroupDto.id} 的用户组不存在`);
+      throw new Error('iam.group.not_found');
     }
 
     // 如果更新用户组名，检查是否与其他用户组冲突
@@ -140,7 +136,7 @@ export class GroupService {
       });
 
       if (existingGroup) {
-        throw new ConflictException(`用户组名 ${updateGroupDto.name} 已存在`);
+        throw new Error('iam.group.name_already_exists');
       }
     }
 
@@ -185,7 +181,7 @@ export class GroupService {
     });
 
     if (!group) {
-      throw new NotFoundException(`ID为 ${removeGroupDto.id} 的用户组不存在`);
+      throw new Error('iam.group.not_found');
     }
 
     await this.groupRepository.softDelete(removeGroupDto.id);
@@ -208,9 +204,7 @@ export class GroupService {
     });
 
     if (!group) {
-      throw new NotFoundException(
-        `ID为 ${addUsersToGroupDto.groupId} 的用户组不存在`,
-      );
+      throw new Error('iam.group.not_found');
     }
 
     const users = await this.userRepository.find({
@@ -249,9 +243,7 @@ export class GroupService {
     });
 
     if (!group) {
-      throw new NotFoundException(
-        `ID为 ${removeUsersFromGroupDto.groupId} 的用户组不存在`,
-      );
+      throw new Error('iam.group.not_found');
     }
 
     if (!group.users) {

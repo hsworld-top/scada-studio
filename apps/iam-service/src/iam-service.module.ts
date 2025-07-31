@@ -14,6 +14,7 @@ import { SharedDatabaseModule } from './modules/database/database.module';
 import { UserModule } from './modules/user/user.module';
 import { GroupModule } from './modules/group/group.module';
 import { RoleModule } from './modules/role/role.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 // 导入全局异常过滤器
 import { GlobalExceptionFilter } from './common/global-exception.filter';
@@ -49,6 +50,7 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
     UserModule,
     GroupModule,
     RoleModule,
+    AuthModule,
   ],
 
   providers: [

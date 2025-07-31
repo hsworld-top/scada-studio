@@ -117,6 +117,24 @@ export class UserService {
     const { password: _, ...result } = user;
     return result as User;
   }
+  /**
+   * 根据用户名查找用户
+   * @param username 用户名
+   * @param tenantId 租户ID
+   * @returns 用户信息
+   */
+  async findOneByUsername(
+    username: string,
+    tenantId: number,
+  ): Promise<User | null> {
+    const user = await this.userRepository.findOne({
+      where: { username, tenantId },
+      relations: ['roles', 'groups'],
+    });
+    if (!user) return null;
+    const { password: _, ...result } = user;
+    return result as User;
+  }
 
   /**
    * 更新用户信息

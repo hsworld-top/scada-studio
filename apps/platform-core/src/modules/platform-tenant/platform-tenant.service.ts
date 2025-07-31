@@ -37,6 +37,7 @@ export class TenantService implements OnModuleInit {
           maxProjects: 20,
         },
       });
+      // TODO: 调用iam-service创建默认管理员
     }
   }
 
