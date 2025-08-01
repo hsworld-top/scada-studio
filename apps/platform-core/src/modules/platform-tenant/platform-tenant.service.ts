@@ -1,8 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ClientProxy } from '@nestjs/microservices';
 import { TenantQuota, TenantStatus } from '@app/shared-dto-lib';
 import { Repository } from 'typeorm';
 import { Tenant } from './platform-tenant.entity';
+import { AppLogger } from '@app/logger-lib';
 
 /**
  * TenantService 租户管理服务
@@ -16,7 +18,12 @@ export class TenantService implements OnModuleInit {
   constructor(
     @InjectRepository(Tenant)
     private readonly tenantRepository: Repository<Tenant>,
-  ) {}
+    @Inject('IAM_SERVICE')
+    private readonly iamServiceClient: ClientProxy,
+    private readonly logger: AppLogger,
+  ) {
+    this.logger.setContext('TenantService');
+  }
 
   /**
    * 服务初始化钩子
@@ -26,7 +33,7 @@ export class TenantService implements OnModuleInit {
     // 检查是否已有租户
     const count = await this.tenantRepository.count();
     if (count === 0) {
-      await this.tenantRepository.save({
+      const defaultTenant = await this.tenantRepository.save({
         name: 'default',
         slug: 'default',
         status: TenantStatus.ACTIVE,
@@ -37,7 +44,9 @@ export class TenantService implements OnModuleInit {
           maxProjects: 20,
         },
       });
-      // TODO: 调用iam-service创建默认管理员
+
+      // 为默认租户创建管理员账号和分配权限
+      await this.createDefaultAdminForTenant(defaultTenant.id);
     }
   }
 
@@ -68,6 +77,9 @@ export class TenantService implements OnModuleInit {
       status: TenantStatus.ACTIVE,
       quota,
     });
+
+    // 创建默认管理员账号和分配权限
+    await this.createDefaultAdminForTenant(tenant.id);
 
     return tenant;
   }
@@ -164,5 +176,14 @@ export class TenantService implements OnModuleInit {
     }
 
     return tenant;
+  }
+
+  /**
+   * 为租户创建默认管理员账号和分配权限
+   * @param tenantId 租户ID
+   * @private
+   */
+  private async createDefaultAdminForTenant(tenantId: number): Promise<void> {
+    // TODO 调用iam-service进行租户的管理员账号初始化
   }
 }

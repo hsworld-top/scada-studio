@@ -300,8 +300,20 @@ export class AuthService {
    * @returns 用户权限
    */
   private async _getUserPermissions(user: Partial<User>) {
-    // const permissions = await this.permissionService.findAll(user.tenantId!);
-    // return permissions;
+    // if (!user.id || !user.tenantId) {
+    //   return [];
+    // }
+    // try {
+    //   return await this.permissionService.getUserPermissions(
+    //     user.id.toString(),
+    //     user.tenantId.toString(),
+    //   );
+    // } catch (error) {
+    //   this.logger.warn(
+    //     `Failed to get user permissions for user ${user.id}: ${error.message}`,
+    //   );
+    //   return [];
+    // }
   }
   /**
    * 登出

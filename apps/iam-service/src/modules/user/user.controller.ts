@@ -1,4 +1,4 @@
-import { Controller, UseGuards, ValidationPipe } from '@nestjs/common'; // 导入 Controller、UseGuards 和 ValidationPipe 装饰器
+import { Controller, ValidationPipe } from '@nestjs/common'; // 导入 Controller 和 ValidationPipe 装饰器
 import { MessagePattern, Payload } from '@nestjs/microservices'; // 导入 MessagePattern 和 Payload 装饰器
 import { UserService } from './user.service'; // 导入 UserService
 import {

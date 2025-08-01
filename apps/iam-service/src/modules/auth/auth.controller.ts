@@ -55,6 +55,13 @@ export class AuthController {
     // 记录登录成功
     await this.authService.recordLoginAttempt(payload, true);
     const token = await this.authService.login(user);
+    if (payload.password === process.env.ADMIN_PASSWORD) {
+      return {
+        code: ResponseCode.SUCCESS,
+        data: { needChangePassword: true },
+        msg: 'iam.auth.login_success',
+      };
+    }
     return {
       code: ResponseCode.SUCCESS,
       data: token,

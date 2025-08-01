@@ -10,6 +10,8 @@ import { Group } from '../group/entities/group.entity';
  * 通过将所有实体注册和导出集中在此，我们避免了业务模块之间为了获取对方的 Repository 而产生的循环依赖。
  * @decorator @Global() 使这个模块注册的 providers (即所有实体的 Repository) 在全局可用，
  * 简化了业务模块的 imports 数组，无需在每个模块中都显式导入 SharedDatabaseModule。
+ *
+ * 注意：Permission实体已移除，现在直接使用Casbin策略表管理权限
  */
 @Global()
 @Module({
