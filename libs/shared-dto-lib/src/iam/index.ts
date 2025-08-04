@@ -500,3 +500,77 @@ export class RefreshTokenDto {
   @IsString()
   sessionId?: string;
 }
+/**
+ * 权限装饰器
+ */
+export const PERMISSIONS_KEY = 'permissions';
+/**
+ * 添加权限策略
+ */
+export class AddPolicyDto {
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+
+  @IsString()
+  @IsNotEmpty()
+  resource: string;
+
+  @IsString()
+  @IsNotEmpty()
+  action: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  tenantId: number;
+}
+/**
+ * 删除权限策略
+ */
+export class RemovePolicyDto {
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+
+  @IsString()
+  @IsNotEmpty()
+  resource: string;
+
+  @IsString()
+  @IsNotEmpty()
+  action: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  tenantId: number;
+}
+/**
+ * 获取角色权限
+ */
+export class GetPermissionsForRoleDto {
+  @IsString()
+  @IsNotEmpty()
+  role: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  tenantId: number;
+}
+
+/**
+ * 用户组分配角色
+ */
+export class AssignRolesToGroupDto {
+  @IsInt()
+  @IsNotEmpty()
+  tenantId: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  groupId: number;
+
+  @IsArray()
+  @IsInt({ each: true })
+  @IsNotEmpty({ each: true })
+  roleIds: number[];
+}

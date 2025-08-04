@@ -155,7 +155,7 @@ export class CasbinService implements OnModuleInit {
   }
 
   /**
-   * 添加权限策略
+   * 为角色添加权限策略
    */
   async addPolicy(
     role: string,
@@ -176,7 +176,7 @@ export class CasbinService implements OnModuleInit {
   }
 
   /**
-   * 移除权限策略
+   * 为角色移除权限策略
    */
   async removePolicy(
     role: string,
@@ -207,7 +207,7 @@ export class CasbinService implements OnModuleInit {
   }
 
   /**
-   * 批量添加权限策略
+   * 批量为角色添加权限策略
    */
   async addPolicies(
     policies: Array<[string, string, string, string]>,
@@ -325,8 +325,35 @@ export class CasbinService implements OnModuleInit {
       await this.clearUserPermissionCache(userId, tenantId);
     }
 
+    // 清除所有包含该角色的用户组的权限缓存
+    const groups = await this.getGroupsForRole(role, tenantId);
+    for (const groupId of groups) {
+      await this.clearGroupPermissionCache(groupId, tenantId);
+    }
+
     this.logger.debug(
       `Cleared permission cache for role ${role} in tenant ${tenantId}`,
+    );
+  }
+
+  /**
+   * 清除用户组权限缓存
+   */
+  private async clearGroupPermissionCache(
+    groupId: string,
+    tenantId: string,
+  ): Promise<void> {
+    const groupPattern = `${IAM_CACHE_KEYS.GROUP_CACHE}${tenantId}:${groupId}`;
+    await this.redisService.del(groupPattern);
+
+    // 清除该用户组所有用户的权限缓存
+    const users = await this.getUsersForGroup(groupId, tenantId);
+    for (const userId of users) {
+      await this.clearUserPermissionCache(userId, tenantId);
+    }
+
+    this.logger.debug(
+      `Cleared permission cache for group ${groupId} in tenant ${tenantId}`,
     );
   }
 
@@ -337,6 +364,7 @@ export class CasbinService implements OnModuleInit {
     const patterns = [
       `${IAM_CACHE_KEYS.PERMISSION_CACHE}*`,
       `${IAM_CACHE_KEYS.ROLE_CACHE}*`,
+      `${IAM_CACHE_KEYS.GROUP_CACHE}*`,
       `${IAM_CACHE_KEYS.USER_CACHE}*`,
     ];
 
@@ -345,5 +373,148 @@ export class CasbinService implements OnModuleInit {
     }
 
     this.logger.log('Cleared all permission caches');
+  }
+
+  /**
+   * 用户组分配角色（修复：使用角色名称而不是ID）
+   */
+  async assignRolesToGroup(
+    tenantId: number,
+    groupId: number,
+    roleNames: string[], // 修改为使用角色名称
+  ): Promise<boolean> {
+    const result = await this.enforcer.addGroupingPolicies(
+      roleNames.map((roleName) => [
+        groupId.toString(),
+        roleName,
+        tenantId.toString(),
+      ]),
+    );
+    if (result) {
+      await this.clearGroupPermissionCache(
+        groupId.toString(),
+        tenantId.toString(),
+      );
+    }
+    return result;
+  }
+
+  /**
+   * 用户组添加用户
+   */
+  async addUsersToGroup(
+    tenantId: number,
+    groupId: number,
+    userIds: number[],
+  ): Promise<boolean> {
+    const result = await this.enforcer.addGroupingPolicies(
+      userIds.map((id) => [
+        id.toString(),
+        groupId.toString(),
+        tenantId.toString(),
+      ]),
+    );
+    if (result) {
+      // 清除相关用户的权限缓存
+      for (const userId of userIds) {
+        await this.clearUserPermissionCache(
+          userId.toString(),
+          tenantId.toString(),
+        );
+      }
+    }
+    return result;
+  }
+
+  /**
+   * 从用户组移除用户
+   */
+  async removeUsersFromGroup(
+    tenantId: number,
+    groupId: number,
+    userIds: number[],
+  ): Promise<boolean> {
+    const result = await this.enforcer.removeGroupingPolicies(
+      userIds.map((id) => [
+        id.toString(),
+        groupId.toString(),
+        tenantId.toString(),
+      ]),
+    );
+    if (result) {
+      // 清除相关用户的权限缓存
+      for (const userId of userIds) {
+        await this.clearUserPermissionCache(
+          userId.toString(),
+          tenantId.toString(),
+        );
+      }
+    }
+    return result;
+  }
+
+  /**
+   * 从用户组移除角色
+   */
+  async removeRolesFromGroup(
+    tenantId: number,
+    groupId: number,
+    roleNames: string[],
+  ): Promise<boolean> {
+    const result = await this.enforcer.removeGroupingPolicies(
+      roleNames.map((roleName) => [
+        groupId.toString(),
+        roleName,
+        tenantId.toString(),
+      ]),
+    );
+    if (result) {
+      await this.clearGroupPermissionCache(
+        groupId.toString(),
+        tenantId.toString(),
+      );
+    }
+    return result;
+  }
+
+  /**
+   * 获取用户组的所有角色
+   */
+  async getRolesForGroup(groupId: string, tenantId: string): Promise<string[]> {
+    return this.enforcer.getRolesForUser(groupId, tenantId);
+  }
+
+  /**
+   * 获取角色的所有用户组
+   */
+  async getGroupsForRole(role: string, tenantId: string): Promise<string[]> {
+    return this.enforcer.getUsersForRole(role, tenantId);
+  }
+
+  /**
+   * 获取用户组的所有用户
+   */
+  async getUsersForGroup(groupId: string, tenantId: string): Promise<string[]> {
+    return this.enforcer.getUsersForRole(groupId, tenantId);
+  }
+
+  /**
+   * 获取用户的所有用户组
+   */
+  async getGroupsForUser(userId: string, tenantId: string): Promise<string[]> {
+    return this.enforcer.getRolesForUser(userId, tenantId);
+  }
+
+  /**
+   * 删除用户组的所有关联
+   */
+  async deleteGroup(groupId: string): Promise<boolean> {
+    const result = await this.enforcer.deleteUser(groupId);
+    if (result) {
+      // 清除用户组相关的所有缓存
+      const pattern = `${IAM_CACHE_KEYS.GROUP_CACHE}*:${groupId}`;
+      await this.redisService.scanDel(pattern);
+    }
+    return result;
   }
 }

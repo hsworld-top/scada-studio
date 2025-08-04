@@ -7,6 +7,7 @@ import { Group } from '../group/entities/group.entity';
 import { CreateUserDto, UpdateUserDto, UserStatus } from '@app/shared-dto-lib';
 import * as bcrypt from 'bcrypt'; // 导入 bcrypt
 import { AppLogger } from '@app/logger-lib';
+import { CasbinService } from '../casbin/casbin.service';
 
 @Injectable()
 export class UserService {
@@ -17,6 +18,7 @@ export class UserService {
     private readonly roleRepository: Repository<Role>,
     @InjectRepository(Group)
     private readonly groupRepository: Repository<Group>,
+    private readonly casbinService: CasbinService,
     private readonly logger: AppLogger,
   ) {
     this.logger.setContext('UserService');
@@ -73,6 +75,26 @@ export class UserService {
 
     // 保存用户
     const savedUser = await this.userRepository.save(user);
+
+    // 同步用户角色到 Casbin
+    if (savedUser.roles && savedUser.roles.length > 0) {
+      for (const role of savedUser.roles) {
+        await this.casbinService.addRoleForUser(
+          savedUser.id.toString(),
+          role.name,
+          savedUser.tenantId.toString(),
+        );
+      }
+    }
+
+    // 同步用户组关联到 Casbin
+    if (savedUser.groups && savedUser.groups.length > 0) {
+      for (const group of savedUser.groups) {
+        await this.casbinService.addUsersToGroup(savedUser.tenantId, group.id, [
+          savedUser.id,
+        ]);
+      }
+    }
 
     // 返回用户信息（不含密码）
     const { password: _, ...result } = savedUser;
@@ -152,6 +174,10 @@ export class UserService {
       throw new Error(`iam.user.user_not_found:${updateUserDto.id}`);
     }
 
+    // 保存原始的角色和用户组信息用于后续同步
+    const originalRoles = user.roles || [];
+    const originalGroups = user.groups || [];
+
     // 更新基本信息
     if (updateUserDto.username) user.username = updateUserDto.username;
     if (updateUserDto.email) user.email = updateUserDto.email;
@@ -192,9 +218,79 @@ export class UserService {
     // 保存更新
     const updatedUser = await this.userRepository.save(user);
 
+    // 同步角色变更到 Casbin
+    await this.syncUserRolesToCasbin(updatedUser, originalRoles);
+
+    // 同步用户组变更到 Casbin
+    await this.syncUserGroupsToCasbin(updatedUser, originalGroups);
+
     // 返回用户信息（不含密码）
     const { password: _, ...result } = updatedUser;
     return result as User;
+  }
+
+  /**
+   * 同步用户角色到 Casbin
+   */
+  private async syncUserRolesToCasbin(
+    user: User,
+    originalRoles: Role[],
+  ): Promise<void> {
+    const currentRoles = user.roles || [];
+    const originalRoleNames = originalRoles.map((role) => role.name);
+    const currentRoleNames = currentRoles.map((role) => role.name);
+
+    // 移除不再拥有的角色
+    for (const roleName of originalRoleNames) {
+      if (!currentRoleNames.includes(roleName)) {
+        await this.casbinService.removeRoleForUser(
+          user.id.toString(),
+          roleName,
+          user.tenantId.toString(),
+        );
+      }
+    }
+
+    // 添加新拥有的角色
+    for (const roleName of currentRoleNames) {
+      if (!originalRoleNames.includes(roleName)) {
+        await this.casbinService.addRoleForUser(
+          user.id.toString(),
+          roleName,
+          user.tenantId.toString(),
+        );
+      }
+    }
+  }
+
+  /**
+   * 同步用户组关联到 Casbin
+   */
+  private async syncUserGroupsToCasbin(
+    user: User,
+    originalGroups: Group[],
+  ): Promise<void> {
+    const currentGroups = user.groups || [];
+    const originalGroupIds = originalGroups.map((group) => group.id);
+    const currentGroupIds = currentGroups.map((group) => group.id);
+
+    // 从不再属于的用户组中移除
+    for (const groupId of originalGroupIds) {
+      if (!currentGroupIds.includes(groupId)) {
+        await this.casbinService.removeUsersFromGroup(user.tenantId, groupId, [
+          user.id,
+        ]);
+      }
+    }
+
+    // 添加到新属于的用户组
+    for (const groupId of currentGroupIds) {
+      if (!originalGroupIds.includes(groupId)) {
+        await this.casbinService.addUsersToGroup(user.tenantId, groupId, [
+          user.id,
+        ]);
+      }
+    }
   }
 
   /**

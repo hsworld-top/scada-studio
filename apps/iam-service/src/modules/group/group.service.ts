@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Group } from './entities/group.entity';
-import { Role } from '../role/entities/role.entity';
 import { User } from '../user/entities/user.entity';
+import { Role } from '../role/entities/role.entity';
 import {
   CreateGroupDto,
   UpdateGroupDto,
@@ -11,8 +11,10 @@ import {
   RemoveGroupDto,
   AddUsersToGroupDto,
   RemoveUsersFromGroupDto,
+  AssignRolesToGroupDto,
 } from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
+import { CasbinService } from '../casbin/casbin.service';
 /**
  * 用户组服务
  * @description
@@ -25,10 +27,11 @@ export class GroupService {
   constructor(
     @InjectRepository(Group)
     private readonly groupRepository: Repository<Group>,
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
+    private readonly casbinService: CasbinService,
     private readonly logger: AppLogger,
   ) {
     this.logger.setContext('GroupService');
@@ -56,28 +59,6 @@ export class GroupService {
       tenantId: createGroupDto.tenantId,
     });
 
-    // 如果指定了角色，则关联角色
-    if (createGroupDto.roleIds && createGroupDto.roleIds.length > 0) {
-      const roles = await this.roleRepository.find({
-        where: {
-          id: In(createGroupDto.roleIds),
-          tenantId: createGroupDto.tenantId,
-        },
-      });
-      group.roles = roles;
-    }
-
-    // 如果指定了用户，则关联用户
-    if (createGroupDto.userIds && createGroupDto.userIds.length > 0) {
-      const users = await this.userRepository.find({
-        where: {
-          id: In(createGroupDto.userIds),
-          tenantId: createGroupDto.tenantId,
-        },
-      });
-      group.users = users;
-    }
-
     return this.groupRepository.save(group);
   }
 
@@ -89,7 +70,6 @@ export class GroupService {
   async findAll(tenantId: number): Promise<Group[]> {
     return this.groupRepository.find({
       where: { tenantId },
-      relations: ['roles', 'users'],
     });
   }
 
@@ -102,7 +82,6 @@ export class GroupService {
   async findOne(findOneGroupDto: FindOneGroupDto): Promise<Group> {
     const group = await this.groupRepository.findOne({
       where: { id: findOneGroupDto.id },
-      relations: ['roles', 'users'],
     });
 
     if (!group) {
@@ -122,7 +101,6 @@ export class GroupService {
   async update(updateGroupDto: UpdateGroupDto): Promise<Group> {
     const group = await this.groupRepository.findOne({
       where: { id: updateGroupDto.id },
-      relations: ['roles', 'users'],
     });
 
     if (!group) {
@@ -144,28 +122,6 @@ export class GroupService {
     if (updateGroupDto.name) group.name = updateGroupDto.name;
     if (updateGroupDto.description)
       group.description = updateGroupDto.description;
-
-    // 更新角色关联
-    if (updateGroupDto.roleIds) {
-      const roles = await this.roleRepository.find({
-        where: {
-          id: In(updateGroupDto.roleIds),
-          tenantId: updateGroupDto.tenantId,
-        },
-      });
-      group.roles = roles;
-    }
-
-    // 更新用户关联
-    if (updateGroupDto.userIds) {
-      const users = await this.userRepository.find({
-        where: {
-          id: In(updateGroupDto.userIds),
-          tenantId: updateGroupDto.tenantId,
-        },
-      });
-      group.users = users;
-    }
 
     return this.groupRepository.save(group);
   }
@@ -200,7 +156,6 @@ export class GroupService {
         id: addUsersToGroupDto.groupId,
         tenantId: addUsersToGroupDto.tenantId,
       },
-      relations: ['users'],
     });
 
     if (!group) {
@@ -221,6 +176,12 @@ export class GroupService {
     // 添加新用户到组
     group.users = [...group.users, ...users];
 
+    // Casbin添加用户到用户组
+    await this.casbinService.addUsersToGroup(
+      addUsersToGroupDto.tenantId,
+      group.id,
+      addUsersToGroupDto.userIds,
+    );
     return this.groupRepository.save(group);
   }
 
@@ -239,7 +200,6 @@ export class GroupService {
         id: removeUsersFromGroupDto.groupId,
         tenantId: removeUsersFromGroupDto.tenantId,
       },
-      relations: ['users'],
     });
 
     if (!group) {
@@ -255,6 +215,138 @@ export class GroupService {
       (user) => !removeUsersFromGroupDto.userIds.includes(user.id),
     );
 
+    // Casbin从用户组移除用户
+    await this.casbinService.removeUsersFromGroup(
+      removeUsersFromGroupDto.tenantId,
+      group.id,
+      removeUsersFromGroupDto.userIds,
+    );
+
     return this.groupRepository.save(group);
+  }
+
+  /**
+   * 获取用户组用户
+   * @param tenantId 租户ID
+   * @param groupId 用户组ID
+   * @returns 用户组用户
+   */
+  async getUsers(tenantId: number, groupId: number): Promise<User[]> {
+    const group = await this.groupRepository.findOne({
+      where: {
+        id: groupId,
+        tenantId: tenantId,
+      },
+    });
+
+    if (!group) {
+      throw new Error('iam.group.not_found');
+    }
+
+    return group.users;
+  }
+  /**
+   * 获取用户组角色
+   * @param tenantId 租户ID
+   * @param groupId 用户组ID
+   * @returns 用户组角色
+   */
+  async getRoles(tenantId: number, groupId: number): Promise<Role[]> {
+    const group = await this.groupRepository.findOne({
+      where: {
+        id: groupId,
+        tenantId: tenantId,
+      },
+    });
+
+    if (!group) {
+      throw new Error('iam.group.not_found');
+    }
+
+    return group.roles;
+  }
+  /**
+   * 用户组分配角色
+   * @param tenantId 租户ID
+   * @param groupId 用户组ID
+   * @param roleIds 角色ID数组
+   * @returns 更新后的用户组
+   */
+  async assignRoles(
+    assignRolesToGroupDto: AssignRolesToGroupDto,
+  ): Promise<Group> {
+    const group = await this.groupRepository.findOne({
+      where: {
+        id: assignRolesToGroupDto.groupId,
+        tenantId: assignRolesToGroupDto.tenantId,
+      },
+    });
+
+    if (!group) {
+      throw new Error('iam.group.not_found');
+    }
+
+    const roles = await this.roleRepository.find({
+      where: {
+        id: In(assignRolesToGroupDto.roleIds),
+        tenantId: assignRolesToGroupDto.tenantId,
+      },
+    });
+
+    group.roles = [...group.roles, ...roles];
+    await this.groupRepository.save(group);
+
+    // Casbin分配角色到用户组（使用角色名称）
+    const roleNames = roles.map((role) => role.name);
+    await this.casbinService.assignRolesToGroup(
+      assignRolesToGroupDto.tenantId,
+      group.id,
+      roleNames,
+    );
+    return group;
+  }
+
+  /**
+   * 从用户组移除角色
+   * @param tenantId 租户ID
+   * @param groupId 用户组ID
+   * @param roleIds 角色ID数组
+   * @returns 更新后的用户组
+   */
+  async removeRoles(
+    removeRolesFromGroupDto: AssignRolesToGroupDto,
+  ): Promise<Group> {
+    const group = await this.groupRepository.findOne({
+      where: {
+        id: removeRolesFromGroupDto.groupId,
+        tenantId: removeRolesFromGroupDto.tenantId,
+      },
+    });
+
+    if (!group) {
+      throw new Error('iam.group.not_found');
+    }
+
+    const roles = await this.roleRepository.find({
+      where: {
+        id: In(removeRolesFromGroupDto.roleIds),
+        tenantId: removeRolesFromGroupDto.tenantId,
+      },
+    });
+
+    // 从用户组中移除指定角色
+    group.roles = group.roles.filter(
+      (role) => !removeRolesFromGroupDto.roleIds.includes(role.id),
+    );
+    await this.groupRepository.save(group);
+
+    // Casbin从用户组移除角色（使用角色名称）
+    const roleNames = roles.map((role) => role.name);
+    await this.casbinService.removeRolesFromGroup(
+      removeRolesFromGroupDto.tenantId,
+      group.id,
+      roleNames,
+    );
+    return group;
   }
 }
