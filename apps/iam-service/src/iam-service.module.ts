@@ -16,6 +16,7 @@ import { GroupModule } from './modules/group/group.module';
 import { RoleModule } from './modules/role/role.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { TenantModule } from './modules/tenant/tenant.module';
 
 // 导入全局异常过滤器
 import { GlobalExceptionFilter } from './common/global-exception.filter';
@@ -53,6 +54,7 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
     RoleModule,
     AuthModule,
     PermissionModule,
+    TenantModule,
   ],
 
   providers: [

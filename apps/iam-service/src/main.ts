@@ -10,7 +10,7 @@ import { AppLogger } from '@app/logger-lib';
 
 /**
  * 启动微服务实例
- * 配置 TCP 传输，端口从环境变量 AUTH_SERVICE_PORT 读取，默认 3002
+ * 配置 TCP 传输，端口从环境变量 IAM_SERVICE_PORT 读取，默认 3002
  */
 async function startMicroservice() {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -19,7 +19,7 @@ async function startMicroservice() {
       transport: Transport.TCP,
       options: {
         host: 'localhost',
-        port: Number(process.env.AUTH_SERVICE_PORT || 3002),
+        port: Number(process.env.IAM_SERVICE_PORT || 3002),
       },
       bufferLogs: true,
     },

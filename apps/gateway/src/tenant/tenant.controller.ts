@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { firstValueFrom } from 'rxjs';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import { Post, Body, Req, Get, Param, Patch, Delete } from '@nestjs/common';
@@ -23,6 +24,8 @@ export class TenantController {
   constructor(
     @Inject('PLATFORM_CORE_SERVICE')
     private readonly platformCoreClient: ClientProxy,
+    @Inject('IAM_SERVICE')
+    private readonly iamService: ClientProxy,
   ) {}
   // 平台管理员登录
   @Post('login')
@@ -87,23 +90,18 @@ export class TenantController {
       sessionId: req.user.sessionId,
     });
   }
-  // 租户管理 创建租户
-  @Post('/')
-  @UseGuards(PlatformSessionGuard)
-  createTenant(@Req() req, @Body(new ValidationPipe()) body: CreateTenantDto) {
-    return this.platformCoreClient.send('createTenant', {
-      name: body.name,
-      slug: body.slug,
-      quota: body.quota,
-      userId: req.user.userId,
-      sessionId: req.user.sessionId,
-    });
+
+  // 查询所有的租户标识
+  @Get('/slugs')
+  getTenantSlugs() {
+    return this.platformCoreClient.send('listSlugs', {});
   }
-  // 查询所有租户
-  @Get('/')
+  // 根据租户标识查询单个租户
+  @Get('/slug/:slug')
   @UseGuards(PlatformSessionGuard)
-  listTenants(@Req() req) {
-    return this.platformCoreClient.send('listTenants', {
+  getTenantBySlug(@Req() req, @Param('slug') slug: string) {
+    return this.platformCoreClient.send('getTenantBySlug', {
+      slug,
       userId: req.user.userId,
       sessionId: req.user.sessionId,
     });
@@ -114,16 +112,6 @@ export class TenantController {
   getTenant(@Req() req, @Param('id', ParseIntPipe) id: number) {
     return this.platformCoreClient.send('getTenant', {
       id,
-      userId: req.user.userId,
-      sessionId: req.user.sessionId,
-    });
-  }
-  // 根据租户标识查询单个租户
-  @Get('/slug/:slug')
-  @UseGuards(PlatformSessionGuard)
-  getTenantBySlug(@Req() req, @Param('slug') slug: string) {
-    return this.platformCoreClient.send('getTenantBySlug', {
-      slug,
       userId: req.user.userId,
       sessionId: req.user.sessionId,
     });
@@ -152,6 +140,42 @@ export class TenantController {
   deleteTenant(@Req() req, @Param('id', ParseIntPipe) id: number) {
     return this.platformCoreClient.send('deleteTenant', {
       id,
+      userId: req.user.userId,
+      sessionId: req.user.sessionId,
+    });
+  }
+  // 租户管理 创建租户
+  @Post('/')
+  @UseGuards(PlatformSessionGuard)
+  async createTenant(
+    @Req() req,
+    @Body(new ValidationPipe()) body: CreateTenantDto,
+  ): Promise<any> {
+    const res = await firstValueFrom(
+      this.platformCoreClient.send('createTenant', {
+        name: body.name,
+        slug: body.slug,
+        quota: body.quota,
+        userId: req.user.userId,
+        sessionId: req.user.sessionId,
+      }),
+    );
+    // 初始化租户，在iam-service中创建初始管理员、初始角色、初始用户组、初始权限
+    const iamRes = await firstValueFrom(
+      this.iamService.send('iam.tenant.init', {
+        tenantId: res.data.id,
+      }),
+    );
+    return {
+      ...res,
+      iamRes,
+    };
+  }
+  // 查询所有租户
+  @Get('/')
+  @UseGuards(PlatformSessionGuard)
+  listTenants(@Req() req) {
+    return this.platformCoreClient.send('listTenants', {
       userId: req.user.userId,
       sessionId: req.user.sessionId,
     });

@@ -162,4 +162,13 @@ export class TenantController {
       data: result,
     };
   }
+  @MessagePattern('listSlugs')
+  async listSlugs() {
+    const result = await this.tenantService.listSlugs();
+    return {
+      code: ResponseCode.SUCCESS,
+      msg: 'platform.tenant.list_slugs_success',
+      data: result,
+    };
+  }
 }

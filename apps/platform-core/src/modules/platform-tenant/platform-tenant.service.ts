@@ -149,4 +149,11 @@ export class TenantService {
 
     return tenant;
   }
+  async listSlugs() {
+    const tenants = await this.tenantRepository.find({
+      select: ['slug'],
+      where: { status: TenantStatus.ACTIVE },
+    });
+    return tenants.map((tenant) => tenant.slug);
+  }
 }

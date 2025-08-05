@@ -574,3 +574,11 @@ export class AssignRolesToGroupDto {
   @IsNotEmpty({ each: true })
   roleIds: number[];
 }
+/**
+ * 初始化租户
+ */
+export class InitTenantDto {
+  @IsInt()
+  @IsNotEmpty()
+  tenantId: number;
+}
