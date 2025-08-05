@@ -22,7 +22,7 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
     LoggerLibModule.forRoot({
       service: 'platform-core',
       env: (process.env.NODE_ENV as any) || 'development',
-      logDir: 'logs',
+      logDir: 'logs/platform-core',
       level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
     }),
     // 数据库连接模块，异步配置

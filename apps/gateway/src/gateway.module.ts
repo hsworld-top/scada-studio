@@ -15,6 +15,8 @@ import { I18nService } from 'nestjs-i18n';
     LoggerLibModule.forRoot({
       service: 'gateway',
       env: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+      logDir: 'logs/gateway',
+      level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
     }),
     JwtModule.registerAsync({
       useFactory: () => ({
