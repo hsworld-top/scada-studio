@@ -16,7 +16,7 @@ import {
   CreateAdminDto,
   DeleteAdminDto,
   ChangeAdminPasswordDto,
-  adminLoginDto,
+  AdminLoginDto,
 } from '@app/shared-dto-lib';
 import { PlatformSessionGuard } from '../guards/platform-session.guard';
 @Controller('api/tenant')
@@ -29,7 +29,7 @@ export class TenantController {
   ) {}
   // 平台管理员登录
   @Post('login')
-  login(@Ip() ip: string, @Body(new ValidationPipe()) body: adminLoginDto) {
+  login(@Ip() ip: string, @Body(new ValidationPipe()) body: AdminLoginDto) {
     return this.platformCoreClient.send('login', {
       username: body.username,
       password: body.password,

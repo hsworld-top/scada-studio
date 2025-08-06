@@ -1,5 +1,5 @@
 import { ExceptionFilter } from '@nestjs/common';
-import { ApiResponse, ResponseCode, ErrorCode } from '@app/api-response-lib';
+import { ApiResponse, ResponseCode, ErrorCode } from '@app/shared-dto-lib';
 let once = false;
 /**
  * 全局异常过滤器

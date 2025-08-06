@@ -16,6 +16,16 @@ export interface ApiResponse<T = any> {
 export enum ResponseCode {
   /** 成功 */
   SUCCESS = 0,
+  /** 参数错误 */
+  BAD_REQUEST = 400,
+  /** 未授权 */
+  UNAUTHORIZED = 401,
+  /** 禁止访问 */
+  FORBIDDEN = 403,
+  /** 资源不存在 */
+  NOT_FOUND = 404,
+  /** 请求过于频繁 */
+  TOO_MANY_REQUESTS = 429,
   /** 服务器内部错误 */
   INTERNAL_SERVER_ERROR = 500,
   /** 密码错误 */
@@ -38,6 +48,14 @@ export enum ResponseCode {
   TENANT_ALREADY_EXISTS = 1009,
   /** 租户不存在 */
   TENANT_NOT_FOUND = 1010,
+  /** 角色不存在 */
+  ROLE_NOT_FOUND = 1011,
+  /** 权限不存在 */
+  PERMISSION_NOT_FOUND = 1012,
+  /** 用户组不存在 */
+  GROUP_NOT_FOUND = 1013,
+  /** 服务不可用 */
+  SERVICE_UNAVAILABLE = 1014,
 }
 /**
  * 错误码映射

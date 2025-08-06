@@ -2,7 +2,7 @@ import { Controller, ValidationPipe } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 import { LoginDto, LogoutDto, RefreshTokenDto } from '@app/shared-dto-lib';
-import { ResponseCode } from '@app/api-response-lib';
+import { ResponseCode } from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
 /**
  * 认证控制器

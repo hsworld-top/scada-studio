@@ -1,6 +1,6 @@
 import { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiResponse, ResponseCode } from './api-response.interface';
+import { ApiResponse, ResponseCode } from '@app/shared-dto-lib';
 import { I18nService } from 'nestjs-i18n';
 
 /**

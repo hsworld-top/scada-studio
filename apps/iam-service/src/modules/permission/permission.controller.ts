@@ -1,7 +1,7 @@
 import { Controller, UseGuards, ValidationPipe } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CasbinService } from '../casbin/casbin.service';
-import { ResponseCode } from '@app/api-response-lib';
+import { ResponseCode } from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
 import {
   AddPolicyDto,

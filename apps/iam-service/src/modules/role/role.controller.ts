@@ -9,7 +9,7 @@ import {
   RemoveRoleDto,
 } from '@app/shared-dto-lib';
 import { AppLogger } from '@app/logger-lib';
-import { ResponseCode } from '@app/api-response-lib';
+import { ResponseCode } from '@app/shared-dto-lib';
 
 /**
  * 角色管理控制器

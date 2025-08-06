@@ -8,7 +8,7 @@ import {
   FindOneUserDto,
   RemoveUsersDto,
 } from '@app/shared-dto-lib';
-import { ResponseCode } from '@app/api-response-lib';
+import { ResponseCode } from '@app/shared-dto-lib';
 /**
  * 用户控制器
  */

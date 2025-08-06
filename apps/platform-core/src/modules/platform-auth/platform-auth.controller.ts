@@ -1,11 +1,14 @@
 import { Injectable, UseGuards } from '@nestjs/common';
 import { PlatformAuthService } from './platform-auth.service';
-import { ResponseCode } from '@app/api-response-lib';
 import { AuditTenantLogService } from '../audit/audit-tenant-log.service';
 import { PlatformSessionGuard } from '../../guards/platform-session.guard';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ValidationPipe } from '@nestjs/common';
-import { adminLoginDto, adminLogoutDto } from '@app/shared-dto-lib';
+import {
+  AdminLoginDto,
+  AdminLogoutDto,
+  ResponseCode,
+} from '@app/shared-dto-lib';
 
 /**
  * 平台认证控制器
@@ -24,7 +27,7 @@ export class PlatformAuthController {
   @MessagePattern('login')
   async login(
     @Payload(new ValidationPipe())
-    payload: adminLoginDto,
+    payload: AdminLoginDto,
   ) {
     const result = await this.authService.login(
       payload.username,
@@ -47,7 +50,7 @@ export class PlatformAuthController {
   @UseGuards(PlatformSessionGuard)
   async logout(
     @Payload(new ValidationPipe())
-    payload: adminLogoutDto,
+    payload: AdminLogoutDto,
   ) {
     await this.authService.logout(payload.user.id);
     await this.auditTenantLogService.audit({
