@@ -2,7 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformUser } from './platform-user.entity';
 import { Repository } from 'typeorm';
-import { UserStatus } from '@app/shared-dto-lib';
+import { PasswordUtil, UserStatus } from '@app/shared-dto-lib';
 import * as bcrypt from 'bcrypt';
 
 /**
@@ -120,8 +120,6 @@ export class PlatformUserService implements OnModuleInit {
    * @returns 是否满足强度要求
    */
   private isStrongPassword(password: string): boolean {
-    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(
-      password,
-    );
+    return PasswordUtil.checkPasswordStrength(password).isValid;
   }
 }

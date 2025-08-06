@@ -4,10 +4,10 @@ import { ConfigModule } from '@nestjs/config';
 import { I18nLibModule } from '@app/i18n-lib';
 import { LoggerLibModule } from '@app/logger-lib';
 import { JwtModule } from '@nestjs/jwt';
-import { TenantController } from './tenant/tenant.controller';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
 import { I18nService } from 'nestjs-i18n';
+import { IamModule } from './modules/iam/iam.module';
+import { TenantModule } from './modules/tenant/tenant.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
@@ -23,29 +23,12 @@ import { I18nService } from 'nestjs-i18n';
         secret: process.env.JWT_SECRET,
         signOptions: { expiresIn: '60m' },
       }),
+      global: true,
     }),
-    ClientsModule.register([
-      {
-        name: 'PLATFORM_CORE_SERVICE',
-        transport: Transport.TCP,
-        options: {
-          host: process.env.PLATFORM_CORE_HOST || 'localhost',
-          port: Number(process.env.PLATFORM_CORE_PORT) || 3001,
-        },
-      },
-    ]),
-    ClientsModule.register([
-      {
-        name: 'IAM_SERVICE',
-        transport: Transport.TCP,
-        options: {
-          host: process.env.IAM_SERVICE_HOST || 'localhost',
-          port: Number(process.env.IAM_SERVICE_PORT) || 3002,
-        },
-      },
-    ]),
+    IamModule,
+    TenantModule,
   ],
-  controllers: [TenantController],
+  controllers: [],
   providers: [
     {
       provide: APP_FILTER,
